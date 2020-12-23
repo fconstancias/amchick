@@ -1,0 +1,211 @@
+---
+title: "Receiver taxa analysis"
+author: "Sneha"
+date: "23/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls())
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Loading required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(plotly)
+```
+
+
+### Loading phyloseq object
+
+```{r}
+#directory where the phyloseq object is 
+
+ps = "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq_update.RDS"
+
+ps %>% 
+  readRDS() -> physeq
+```
+
+### Filter out samples having low reads
+
+```{r}
+physeq %>% 
+subset_samples(sample_sums(physeq) > 4576) -> physeq
+
+
+
+```
+
+
+### What are the strain-specific taxa?
+
+Create a subset of physeq that contains only the two strains - CCUG-59168 (a strain of *Enterococcus faecalis*) and HV292.1 (a strain of *Escherichia coli*)
+```{r}
+(physeq %>% 
+  subset_samples(Experiment %in% c("CCUG59168","HV292.1")) -> strain_physeq)
+```
+
+
+Obtain the ASVs specific to the two strains 
+```{r}
+#store otu table as dataframe in `strain_ASV`
+otu_table(strain_physeq) %>% as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV") -> strain_ASV
+
+strain_ASV %>%
+  DT::datatable()
+
+
+CCUG_ASVs <- strain_ASV$ASV[strain_ASV$`CCUG-59168-S352`>1000]
+HV292_ASVs <- strain_ASV$ASV[strain_ASV$`HV292-1-S350`>1000]
+
+CCUG_ASVs
+
+HV292_ASVs
+```
+
+
+
+
+### Normalization to percentages
+
+Normalizing the counts for each ASV to percentages
+```{r}
+
+physeq %>%
+  transform_sample_counts(function(x) x/sum(x) * 100) ->normalized_physeq
+
+```
+
+### Preparing the dataset for plotting
+
+Create a dataframe with the % strain specific ASVs for each sample that we want to plot
+```{r}
+#make otu table filterable by ASV
+normalized_physeq %>%  otu_table() %>% as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV") -> otu.table
+
+
+#add columns containing the percent of strain specific ASVs to sample data and make sure all the columns that should be numeric are numeric
+physeq %>% 
+  sample_data %>% 
+  as.matrix() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("SampleID") %>%  
+
+  mutate(ASV20=as.numeric(otu.table[20,-1]),ASV21=as.numeric(otu.table[21,-1]),ASV84=as.numeric(otu.table[84,-1]),ASV86=as.numeric(otu.table[86,-1])) %>%  
+
+  mutate(Day_of_Connection=as.numeric(Day_of_Connection),Day_of_Treatment=as.numeric(Day_of_Treatment),Day_from_Inoculum=as.numeric(Day_from_Inoculum))  %>% 
+  
+  mutate(ASV_HV292=ASV20+ASV21,ASV_CCUG=ASV84+ASV86) -> sample.data
+  
+  
+
+#filter out batch and IR2
+sample.data %>% filter(Experiment != "Batch", Reactor != "IR2") -> sample.data.cont #this is 
+
+#what we will use for plotting
+
+head(sample.data.cont)
+
+```
+
+Resetting factor levels in the order we want
+
+```{r}
+
+sample.data.cont$Experiment <- fct_relevel(sample.data.cont$Experiment,"Mock", "HV292.1", "CCUG59168", "Cecum","Continuous")
+
+#creating a new column with treatment and reactor combined for better readability in the graph
+sample.data.cont %>% unite("Reactor_Treatment",Reactor:Treatment,remove = FALSE) ->sample.data.cont
+
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="DONOR_DONOR"] <- "DONOR"
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="STRAIN_STRAIN"] <- "STRAIN"
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="positive_positive"] <- "positive"
+
+sample.data.cont$Reactor_Treatment <- fct_relevel(sample.data.cont$`Reactor_Treatment`,"positive","STRAIN","DONOR", "IR1_UNTREATED","CR_UNTREATED","CR_CTX","CR_VAN","TR1_CTX+HV292.1", "TR2_CTX", "TR3_HV292.1", "TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")
+
+```
+
+### Plotting HV292 specific ASVs:
+
+Creating a the dataframe for plotting with all the columns we need (the differnt aesthetics)
+
+```{r}
+sample.data.cont %>% 
+  filter(Reactor %in% c("IR1","CR","TR1", "TR2", "TR3", "TR4","TR5","TR6")) %>% arrange(Day_from_Inoculum) %>% 
+  select(Sample_description,Reactor,Treatment,Reactor_Treatment,Experiment,Enrichment,Day_from_Inoculum,ASV20,ASV21,ASV_HV292) -> plot.df1
+
+  
+plot.df1 %>% pivot_longer(cols = starts_with("ASV"),names_to = "ASV",values_to = "Percent_ASV" ) -> plot.df1
+
+head(plot.df1)
+```
+
+We plot for each Reactor:Treatment combination the percentage of ASVs that are specific to the *E.coli* strain HV292.1 against the `Day_from_Inoculum`. Color of points and lines indicates the particular ASV or the sum of both. The shape of the point tells us whether the percentage was 0 or not. The first vertical gray bar indicates the start of connection to second-stage reactor. The second vertical gray bar indicates the start of treatment. The data was transformed with $log_{10}(1+x)$, where $x$ indicates percentage of strain-specific ASVs. This particular transformation was chosen in order to handle the percantages that were 0 in the data. 
+```{r,fig.width=10, fig.height=12}
+ggplot(data=plot.df1,mapping=aes(color=ASV,shape=Percent_ASV==0))+
+          geom_point(mapping=aes(x=Day_from_Inoculum,y=log10(1+Percent_ASV)),alpha=0.8)+
+           geom_path(mapping=aes(x=Day_from_Inoculum,y=log10(1+Percent_ASV),group=ASV),alpha=0.8) +
+         facet_wrap(Reactor_Treatment~Enrichment,ncol=2) -> plot_HV292
+
+plot_HV292 + geom_vline(xintercept = c(23,39),color="black",alpha=0.4)+ggtitle("Pecentage of HV292 specific ASV") + theme_light()
+```
+
+### Plotting CCUG specific ASVs:
+
+Creating a the dataframe for plotting with all the columns we need (the differnt aesthetics)
+
+```{r}
+sample.data.cont %>% 
+  filter(Reactor %in% c("IR1","CR","TR1", "TR2", "TR3", "TR4","TR5","TR6")) %>% arrange(Day_from_Inoculum) %>% 
+  select(Sample_description,Reactor,Treatment,Reactor_Treatment,Experiment,Enrichment,Day_from_Inoculum,ASV84,ASV86,ASV_CCUG) -> plot.df2
+
+  
+plot.df2 %>% pivot_longer(cols = starts_with("ASV"),names_to = "ASV",values_to = "Percent_ASV" ) -> plot.df2
+
+head(plot.df2)
+```
+We plot for each Reactor:Treatment combination the percentage of ASVs that are specific to the *Enterococcus faecium* strain, CCUG-59168, against the `Day_from_Inoculum`. Color of points and lines indicates the particular ASV or the sum of both. The shape of the point tells us whether the percentage was 0 or not. The first vertical gray bar indicates the start of connection to second-stage reactor. The second vertical gray bar indicates the start of treatment. The second vertical gray bar indicates the start of treatment. The data was transformed with $log_{10}(1+x)$, where $x$ indicates percentage of strain-specific ASVs. This particular transformation was chosen in order to handle the percantages that were 0 in the data. 
+
+```{r,fig.width=10, fig.height=12}
+ggplot(data=plot.df2,mapping=aes(color=ASV,shape=Percent_ASV==0))+
+          geom_point(mapping=aes(x=Day_from_Inoculum,y=log10(1+Percent_ASV)),alpha=0.6)+
+           geom_path(mapping=aes(x=Day_from_Inoculum,y=log10(1+Percent_ASV),group=ASV),alpha=0.6) +
+         facet_wrap(Reactor_Treatment~Enrichment,ncol=2) -> plot_CCUG
+
+plot_CCUG + geom_vline(xintercept = c(23,39),color="black",alpha=0.4) + ggtitle("Pecentage of CCUG specific ASV") + theme_light()
+```
+
+
+```{r,eval=FALSE,include=FALSE}
+ggplot(data=plot.df,mapping=aes(Group=Reactor),position_dodge(0.2))+
+  geom_point( mapping=aes(x=Day_from_Inoculum,y=Percent_strain_specific_ASV,fill=Enrichment,color=ASV,shape=is.0),alpha=0.6)  + geom_path(data=plot.df %>%  filter(Enrichment=="NotEnriched"),mapping=aes(x=Day_from_Inoculum,y=Percent_strain_specific_ASV,group=ASV,color=ASV),size = 0.3)+
+  geom_path(data=plot.df %>%  filter(Enrichment=="Enriched"),mapping=aes(x=Day_from_Inoculum,y=Percent_strain_specific_ASV,group=ASV,color=ASV),size = 0.3)+
+scale_fill_manual(values=c('black',NA),guide = guide_legend(override.aes = list(shape = 21)))  +
+scale_shape_manual(values=c(21,22,23)) + facet_wrap(~Reactor,ncol=2)+
+ scale_y_log10()
+
+
+```
+
+```{r,eval=FALSE,include=FALSE}
+plot.df %>% filter(Enrichment=="Enriched",Reactor=="CR") %>% 
+  ggplot(mapping=aes(x=Day_from_Inoculum,y=Percent_strain_specific_ASV,group=ASV,color=ASV)) +
+  geom_point(mapping = aes(shape=is.0,fill=Treatment)) + scale_fill_manual(values=c('black',NA),guide = guide_legend(override.aes = list(shape = 21))) + scale_shape_manual(values=c(21,22))
+```
+
+```{r}
+for(i in HV292_ASVs){
+  pri<-otu.table[otu.table$ASV==i,-1]
+  pri
+}
+  
+
+```
+

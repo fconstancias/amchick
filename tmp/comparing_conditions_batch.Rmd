@@ -1,0 +1,129 @@
+---
+title: "Comparing conditions"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+options(getClass.msg=FALSE)
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+ 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R") 
+```
+
+
+Loading phyloseq object
+```{r}
+#directory where the phyloseq object is 
+
+ps = "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq_update.RDS"
+
+
+#get strain level information
+ps %>% 
+  readRDS() %>% 
+  phyloseq_get_strains() -> physeq
+
+```
+
+### CTX Treated
+
+Transform sample counts (important to do it before filtering out ASVs otherwise the transformation will not be using all the asvs and hence will be wrong), then subseting only the samples relevant to us (Control and ctx treated batch samples) and then filtering out the ASVs not present in the samples we subsetted. 
+```{r}
+physeq  %>% 
+  transform_sample_counts(function(x) x/sum(x) * 100) %>% 
+  subset_samples(Experiment =="Batch" & Treatment %in%  c('UNTREATED','CTX','CTX+HV292.1'))  %>% 
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE) -> physeq_batch_ecoli
+```
+
+Get taxa common to the treatment conditions (CTX and CTX + strain)
+```{r}
+#taxa present in CTX treated samples
+taxa_CTX <- physeq_batch_ecoli %>% subset_samples(Treatment=='CTX') %>% filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% taxa_names()
+
+#taxa present in CTX + strain treated samples
+taxa_CTX_strain <- physeq_batch_ecoli %>% subset_samples(Treatment=='CTX+HV292.1') %>% filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% taxa_names()
+
+#common taxa
+taxa_common_ecoli<-intersect(taxa_CTX, taxa_CTX_strain)
+
+
+#otu table should only have the ASVs common to the two conditions
+otu_table(physeq_batch_ecoli)<-otu_table(physeq_batch_ecoli)[taxa_common_ecoli,] 
+
+
+
+```
+
+
+Plotting the heatmap . 
+```{r,fig.dim=c(10,8)}
+#reset the factors in the order we want 
+sample_data(physeq_batch_ecoli)$Enrichment <- fct_relevel(sample_data(physeq_batch_ecoli)$Enrichment,'NotEnriched','Enriched')
+
+sample_data(physeq_batch_ecoli)$Treatment <- fct_relevel(sample_data(physeq_batch_ecoli)$Treatment,'UNTREATED','CTX','CTX+HV292.1')
+
+sample_data(physeq_batch_ecoli)$Batch_hour <- fct_relevel(sample_data(physeq_batch_ecoli)$Batch_hour,'0','7','24')
+
+physeq_batch_ecoli %>% phyloseq_ampvis_heatmap(transform="Null", group_by = "Treatment",facet_by =c("Batch_hour","Enrichment"), tax_aggregate = "Species",tax_add=NULL,ntax=length(taxa_common_ecoli) ) -> p.ecoli
+
+p.ecoli
+
+```
+# VAN Treated 
+
+Transform sample counts (important to do it before filtering out ASVs otherwise the transformation will not be using all the asvs and hence will be wrong), then subseting only the samples relevant to us (Control and van treated batch samples) and then filtering out the ASVs not present in the samples we subsetted.
+
+```{r}
+physeq %>% 
+  transform_sample_counts(function(x) x/sum(x) * 100) %>% 
+  subset_samples(Experiment=="Batch" & Treatment %in% c('UNTREATED','VAN','VAN+CCUG59168')) %>% filter_taxa(function(x) sum(x > 0) > 0, TRUE) -> physeq_batch_enterococcus
+```
+
+Get taxa common to the treatment conditions (VAN and VAN + strain)
+
+```{r}
+#taxa present in VAN treated samples
+taxa_van <- physeq_batch_enterococcus %>% subset_samples(Treatment=='VAN') %>%  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+  taxa_names()
+
+#taxa present in VAN+strain treated samples
+taxa_van_strain <- physeq_batch_enterococcus %>% subset_samples(Treatment=='VAN+CCUG59168')%>%
+filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+taxa_names()
+
+#common taxa 
+taxa_common_enterococcus<-intersect(taxa_van, taxa_van_strain)
+
+#otu table should only have the ASVs common to the two conditions
+otu_table(physeq_batch_enterococcus)<-otu_table(physeq_batch_enterococcus)[taxa_common_enterococcus,] 
+
+```
+
+
+Plotting the heatmap . 
+```{r,fig.dim=c(10,8)}
+#reset the factors in the order we want 
+sample_data(physeq_batch_enterococcus)$Enrichment <- fct_relevel(sample_data(physeq_batch_enterococcus)$Enrichment,'NotEnriched','Enriched')
+
+sample_data(physeq_batch_enterococcus)$Treatment <- fct_relevel(sample_data(physeq_batch_enterococcus)$Treatment,'UNTREATED','VAN','VAN+CCUG59168')
+
+sample_data(physeq_batch_enterococcus)$Batch_hour <- fct_relevel(sample_data(physeq_batch_enterococcus)$Batch_hour,'0','7','24')
+
+physeq_batch_enterococcus %>% phyloseq_ampvis_heatmap(transform="Null", group_by = "Treatment",facet_by =c("Batch_hour","Enrichment"), tax_aggregate = "Species",tax_add=NULL,ntax=length(taxa_common_enterococcus) ) -> p.enterococcus
+
+p.enterococcus
+
+```

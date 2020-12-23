@@ -1,0 +1,308 @@
+---
+title: "Enriched heatmap and beta diversity plots"
+author: "Sneha Sundar"
+date: "16/11/2020"
+output: html_document
+---
+
+
+```{r setup, include=TRUE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Loading packages and functions from github:
+
+
+```{r packages,warning=FALSE,message=FALSE,error=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(zCompositions)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+
+```
+
+
+The package is in progress but we do not actually need one, we can directly source the functions from github - **internet connection needed**:
+```{r sourcing, results=FALSE, warning=FALSE, include=TRUE,message=FALSE}
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R") 
+
+
+```
+
+
+### Loading phyloseq object
+
+```{r}
+#directory where the phyloseq object is 
+
+
+ps = "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq_update.RDS"
+
+
+#get strain level information
+ps %>% 
+  readRDS() -> physeq
+
+physeq %>% phyloseq_get_strains_fast() -> physeq
+
+```
+
+
+### Preparing the data for better plotting
+
+Make factor variables out of the columns in the order we want (if you order it ggplot will appropriately plot the facets in this order).
+```{r}
+sample_data(physeq)$Experiment <- fct_relevel(sample_data(physeq)$Experiment, "NTC","Mock", "HV292.1", "CCUG59168", "Cecum","Continuous") 
+
+sample_data(physeq)$Reactor <- fct_relevel(sample_data(physeq)$Reactor,"negative","positive","STRAIN", "DONOR", "IR1", "IR2", "CR", "TR1", "TR2", "TR3", "TR4", "TR5", "TR6","Batch3","Batch4")
+
+
+
+sample_data(physeq)$Reactor_Treatment <- fct_relevel(sample_data(physeq)$`Reactor_Treatment`,"negative","positive","STRAIN","DONOR", "IR1_UNTREATED","IR2_UNTREATED","CR_UNTREATED","CR_CTX","CR_VAN","TR1_CTX+HV292.1", "TR2_CTX", "TR3_HV292.1", "TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168","Batch3_UNTREATED","Batch3_CTX+HV292.1","Batch3_CTX","Batch3_HV292.1","Batch4_UNTREATED","Batch4_VAN","Batch4_VAN+CCUG59168","Batch4_CCUG59168")
+
+sample_data(physeq)$Enrichment <- fct_relevel(sample_data(physeq)$Enrichment, "NotEnriched","Enriched") 
+```
+
+We want to plot only the continuous data so filtering it out. We also do not want reactor IR2
+```{r}
+physeq %>% subset_samples(Experiment=="Continuous"& Reactor!='IR2') -> physeq.cont
+```
+
+## Beta diversity plots
+
+Ordination method : RDA
+
+```{r, message = FALSE}
+physeq.cont %>%
+  rarefy_even_depth(sample.size = 4576,rngseed = 123) %>%
+   phyloseq_plot_bdiv(dlist = NULL, 
+                     m = "CoDa", 
+                     seed = 123,
+                     axis1 = 1,
+                     axis2 = 2) -> p
+p$PCA$layers[[1]] = NULL
+```
+
+
+```{r, message = FALSE}
+p$PCA + geom_point(size=2,
+                   aes(color = Reactor_Treatment, 
+                       shape = Enrichment,
+                       alpha = Day_of_Treatment)) + 
+  theme_light() -> plot_RDA
+
+plot_RDA<-plot_RDA + scale_alpha_continuous(range=c(0.3, 0.9)) + scale_color_viridis_d(na.value = "black") + theme_classic()
+
+plot_RDA
+```
+```{r,warning=FALSE}
+p$PCA + geom_point(size=2,
+                   aes(color = Reactor_Treatment, 
+                       shape = Enrichment,
+                       alpha = Day_of_Treatment)) + 
+  theme_light() +
+  geom_path(arrow = arrow(type = "open", angle = 30, length = unit(0.1, "inches")),
+              size = 0.1, linetype = "solid", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment, fill = Reactor_Treatment)) +
+  scale_alpha_continuous(range=c( 0.9, 0.3)) + scale_color_viridis_d(na.value = "black") +  theme_classic() -> pl
+  
+pl
+```
+
+## Family level abundances
+
+### Heatmaps of relative abundance of Families in unenriched samples 
+
+
+```{r message = TRUE, warning= TRUE}
+
+physeq.cont %>% subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(sample_sums(physeq) > 4576) %>%
+subset_samples(Reactor_Treatment %in% c("CR_UNTREATED","TR1_CTX+HV292.1","TR2_CTX","TR3_HV292.1")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Family",tax_add = NULL,ntax = 350) -> p1.ecoli
+
+
+p1.ecoli + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p1.ecoli
+
+
+
+
+physeq.cont %>% subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(sample_sums(physeq) > 4576) %>% 
+  subset_samples(Reactor_Treatment %in% c("CR_UNTREATED","TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Family",tax_add = NULL,ntax = 350) -> p1.ccug
+
+
+p1.ccug + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p1.ccug
+```
+
+### Heatmaps of relative abundance of Families in unenriched samples (showing only reactors relevant to E.coli strain)
+
+```{r fig.height=8,fig.width=12, fig.align = "center", message = TRUE, warning= TRUE}
+p1.ecoli
+```
+
+### Heatmaps of relative abundance of Families in unenriched samples (showing only reactors relevant to Enterococcus strain)
+
+
+
+```{r fig.height=8, fig.width=12 ,fig.align = "center", message = TRUE, warning= TRUE}
+p1.ccug
+
+```
+
+
+
+### Heatmaps of relative abundance of Families in enriched samples 
+
+
+```{r message = TRUE, warning= TRUE}
+
+
+physeq.cont %>% subset_samples(Enrichment == "Enriched") %>%
+    #subset_samples(sample_sums(physeq) > 4576) %>% 
+subset_samples(Reactor_Treatment %in% c("CR_CTX","TR1_CTX+HV292.1","TR2_CTX","TR3_HV292.1")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Family",tax_add = NULL,ntax = 350) -> p2.ecoli
+
+
+p2.ecoli + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p2.ecoli
+
+
+
+
+physeq.cont %>% subset_samples(Enrichment == "Enriched") %>% 
+  #subset_samples(sample_sums(physeq) > 4576) %>% 
+  subset_samples(Reactor_Treatment %in% c("CR_VAN","TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Family",tax_add = NULL,ntax = 350) -> p2.ccug
+
+
+p2.ccug + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p2.ccug
+```
+
+
+### Heatmaps of relative abundance of famililes in enriched samples (showing only reactors relevant to E.coli strain)
+
+```{r fig.height=4, fig.width=7 ,fig.align = "center", message = TRUE, warning= TRUE}
+p2.ecoli
+```
+
+
+### Heatmaps of relative abundance of Families in enriched samples (showing only reactors relevant to Enterococcus strain)
+
+```{r fig.height=4, fig.width=7 ,fig.align = "center", message = TRUE, warning= TRUE}
+p2.ccug
+
+```
+## Genus level information
+
+
+```{r message = TRUE, warning= TRUE}
+
+physeq.cont %>% subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(sample_sums(physeq) > 4576) %>%
+subset_samples(Reactor_Treatment %in% c("CR_UNTREATED","TR1_CTX+HV292.1","TR2_CTX","TR3_HV292.1")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Genus",tax_add = NULL,ntax = 350) -> p1.ecoli
+
+
+p1.ecoli + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p1.ecoli
+
+
+
+
+physeq.cont %>% subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(sample_sums(physeq) > 4576) %>% 
+  subset_samples(Reactor_Treatment %in% c("CR_UNTREATED","TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Genus",tax_add = NULL,ntax = 350) -> p1.ccug
+
+
+p1.ccug + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p1.ccug
+```
+### Heatmaps of relative abundance of Genus in unenriched samples (showing only reactors relevant to E.coli strain)
+
+
+```{r fig.height=15, fig.width=20 ,fig.align = "center", message = TRUE, warning= TRUE}
+p1.ecoli
+```
+
+### Heatmaps of relative abundance of Genus in unenriched samples (showing only reactors relevant to Enterococcus strain)
+
+
+```{r fig.height=15, fig.width=20 ,fig.align = "center", message = TRUE, warning= TRUE}
+p1.ccug
+
+```
+### Heatmaps of relative abundance of Families in enriched samples 
+
+
+```{r message = TRUE, warning= TRUE}
+
+
+physeq.cont %>% subset_samples(Enrichment == "Enriched") %>%
+    #subset_samples(sample_sums(physeq) > 4576) %>% 
+subset_samples(Reactor_Treatment %in% c("CR_CTX","TR1_CTX+HV292.1","TR2_CTX","TR3_HV292.1")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Genus",tax_add = NULL,ntax = 350) -> p2.ecoli
+
+
+p2.ecoli + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p2.ecoli
+
+
+
+
+physeq.cont %>% subset_samples(Enrichment == "Enriched") %>% 
+  #subset_samples(sample_sums(physeq) > 4576) %>% 
+  subset_samples(Reactor_Treatment %in% c("CR_VAN","TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")) %>% phyloseq_ampvis_heatmap(transform='percent',group_by = 'Day_of_Treatment',facet_by = 'Reactor_Treatment',tax_aggregate = "Genus",tax_add = NULL,ntax = 350) -> p2.ccug
+
+
+p2.ccug + facet_grid( ~ Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::log1p_trans(),
+                       na.value = 'transparent') -> p2.ccug
+```
+
+
+### Heatmaps of relative abundance of Genus in enriched samples (showing only reactors relevant to E.coli strain)
+
+```{r fig.height=7, fig.width=6 ,fig.align = "center", message = TRUE, warning= TRUE}
+p2.ecoli
+```
+
+
+
+### Heatmaps of relative abundance of Genus in enriched samples (showing only reactors relevant to Enterococcus strain)
+
+```{r fig.height=7, fig.width=6 ,fig.align = "center", message = TRUE, warning= TRUE}
+p2.ccug
+
+```

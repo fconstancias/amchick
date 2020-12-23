@@ -1,0 +1,417 @@
+---
+title: "alpha-diversity exploration"
+author: "Sneha Sundar"
+date: "03/11/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+
+
+```
+
+#### Load functions from Github
+
+```{r}
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R") 
+```
+
+#### Load physeq object
+
+```{r}
+
+ps = "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq_update.RDS"
+
+#ps = "/Volumes/green_groups_bt_public/Shared_documents/Alessia Pennacchia/Sequencing/metabarcoding_analysis/metadata_import/physeq_update_31_10.RDS"
+
+
+
+ps %>% 
+  readRDS()  %>% 
+  
+phyloseq_get_strains() -> physeq
+
+
+```
+Remove chloroplastic or mitochondrial sequences if they are there
+```{r}
+physeq %>%
+  phyloseq_remove_chloro_mitho()
+```
+
+Since number of taxa did not change, there are no chloroplastic or mitochondrial sequences.
+
+#### Some preprocessing of the physeq object to make the graphs better 
+
+We will be analysing only the PolyFermS samples here so take a subset of the physeq object.  
+```{r}
+physeq %>% subset_samples(Reactor != "IR2") %>% subset_samples(Experiment!="Batch") -> physeq.cont
+
+
+physeq.cont %>% 
+  sample_data() %>% 
+  as.matrix() %>% 
+   as.data.frame() %>% 
+ rownames_to_column("SampleID") %>% 
+    mutate(Day_of_Connection=as.numeric(Day_of_Connection),Day_of_Treatment=as.numeric(Day_of_Treatment),Day_from_Inoculum=as.numeric(Day_from_Inoculum))  -> sample.data.cont
+
+```
+Resetting factor levels in the order we want and creating a new column Reactor_Treatment .
+```{r}
+sample.data.cont$Experiment <- fct_relevel(sample.data.cont$Experiment,"NTC","Mock", "HV292.1", "CCUG59168", "Cecum","Continuous")
+sample.data.cont$Reactor = fct_relevel(sample.data.cont$Reactor,"negative","positive","STRAIN","DONOR" ,"IR1", "CR", "TR1", "TR2", "TR3", "TR4", "TR5", "TR6")
+
+#creating a new column with treatment and reactor combined for better readability in the graph
+sample.data.cont %>% unite("Reactor_Treatment",Reactor:Treatment,remove = FALSE) ->sample.data.cont
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="negative_negative"] <- "negative"
+
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="DONOR_DONOR"] <- "DONOR"
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="STRAIN_STRAIN"] <- "STRAIN"
+
+sample.data.cont$`Reactor_Treatment`[sample.data.cont$`Reactor_Treatment`=="positive_positive"] <- "positive"
+
+sample.data.cont$Reactor_Treatment <- fct_relevel(sample.data.cont$`Reactor_Treatment`,"negative","positive","STRAIN","DONOR", "IR1_UNTREATED","CR_UNTREATED","CR_CTX","CR_VAN","TR1_CTX+HV292.1", "TR2_CTX", "TR3_HV292.1", "TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168")
+
+sample.data.cont %>% column_to_rownames(var="SampleID") -> sample.data.cont
+```
+
+Overwriting the `physeq.cont %>% sample_data()` with `sample.data.cont`
+```{r}
+
+sample_data(physeq.cont)<-sample.data.cont
+
+
+```
+
+
+#### Rarefaction
+
+Experiment  | Suggested Rarefaction depth
+------------- | -------------
+Batch  | 2574
+Continuous  | 4576
+
+Plotting rarified -unrarified richness
+```{r}
+physeq.cont %>%
+  subset_samples(Experiment == "Continuous") %>%
+  phyloseq_rarefied_unrarefied_richness(sample_size = 4576,
+                                        seed = 123,
+                                        color_data = "Reactor_Treatment",
+                                        fill_data = "Reactor_Treatment",
+                                        shape_data = NULL) -> p
+
+p + ggtitle("Rarified-Unrarified Richness on Continuous Samples")
+```
+
+Rarifying the data 
+```{r}
+physeq.cont %>%
+  subset_samples(Experiment == "Continuous") %>%
+  rarefy_even_depth(sample.size = 4576,rngseed = 123)  -> physeq_continuous_rare
+```
+
+Plotting the rarefaction curvesa
+```{r}
+physeq_continuous_rare %>%
+  phyloseq_rarefaction_curves(stepsize = 100,
+                              color_data = "Day_of_Treatment",
+                              facet_data = "Reactor_Treatment") +
+  scale_y_log10() + scale_color_viridis_c() -> pl
+  
+pl %>%
+  ggplotly(tooltip = "SampleID")
+```
+
+
+Calculating alpha statistics
+```{r,message=FALSE}
+physeq_continuous_rare %>% phyloseq_alphas(phylo=FALSE) -> alphas_cont
+
+```
+Plotting a bar plot of the different diversity indices 
+```{r,fig.align="center"}
+
+alphas_cont %>%
+  plot_alphas(measure = c("Observed", "diversity_shannon", "evenness_pielou"),
+             x_group = "Reactor_Treatment",
+             colour_group = "Enrichment",
+             fill_group = "Enrichment",
+              shape_group = "Enrichment",
+              facet_group = "Reactor_Treatment",
+            test_group = "Reactor_Treatment",
+            test_group_2 = "Enrichment") -> out
+
+out$plot + theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())
+```
+
+
+Observed alpha diversity over time
+
+```{r,fig.height=8}
+out$plot$data %>%
+  dplyr::filter(alphadiversiy == "Observed") %>%
+  arrange(Day_from_Inoculum) %>%
+  ggplot(aes(x = Day_from_Inoculum,
+             y = value,shape=(value==0))) +
+  geom_point(size=1, alpha=0.6, aes(colour = Reactor_Treatment, group = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) + 
+  geom_path(inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) +
+  facet_wrap(Reactor_Treatment ~ Enrichment, ncol=2) +
+  theme_light() -> plot
+
+plot + scale_color_viridis_d(na.value = "black") + geom_vline(xintercept = c(23,39),color="black",alpha=0.4) + ggtitle("Observed Diversity over time") + theme_light() -> plot
+
+
+plot
+```
+
+Shannon Diversity over time for each sample
+
+```{r,fig.height=8}
+out$plot$data %>%
+  dplyr::filter(alphadiversiy == "diversity_shannon") %>%
+  arrange(Day_from_Inoculum) %>%
+  ggplot(aes(x = Day_from_Inoculum,
+             y = value,shape=(value==0))) +
+  geom_point(size=1, alpha=0.6, aes(colour = Reactor_Treatment, group = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) + 
+  geom_path(inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) +
+  facet_wrap(Reactor_Treatment ~ Enrichment, ncol=2) +
+  theme_light() -> plot
+
+plot + scale_color_viridis_d(na.value = "black") + geom_vline(xintercept = c(23,39),color="black",alpha=0.4) + ggtitle("Shannon Index over time") + theme_light() -> plot
+
+
+plot
+```
+
+
+```{r,fig.height=8}
+out$plot$data %>%
+  dplyr::filter(alphadiversiy == "evenness_pielou") %>%
+  arrange(Day_from_Inoculum) %>%
+  ggplot(aes(x = Day_from_Inoculum,
+             y = value,shape=(value==0))) +
+  geom_point(size=1, alpha=0.6, aes(colour = Reactor_Treatment, group = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) + 
+  geom_path(inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment),
+            position=position_jitterdodge(dodge.width=0.9)) +
+  facet_wrap(Reactor_Treatment ~ Enrichment, ncol=2) +
+  theme_light() -> plot
+
+plot + scale_color_viridis_d(na.value = "black") + geom_vline(xintercept = c(23,39),color="black",alpha=0.4) + ggtitle("Pielou Eveness over time") + theme_light() -> plot
+
+plot
+```
+
+
+
+
+Plotting relative abundances at a specific taxonomic rank over time over time as a stacked area chart
+
+
+
+
+### Phylum
+
+
+```{r}
+#fikter out low reads and continuous data and agglomerate
+ physeq.cont %>%  
+  subset_samples(sample_sums(physeq.cont) > 4576) %>% 
+  subset_samples(Experiment=="Continuous") %>% 
+ tax_glom(taxrank = "Phylum")  -> phylum_physeq.cont
+
+
+#normalization
+phylum_physeq.cont %>%   transform_sample_counts(function(x) x/sum(x) * 100) ->normalized_physeq_phylum
+
+#get tax table,and otu table
+tax.table<-normalized_physeq_phylum %>% tax_table() %>%  as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV")
+
+
+normalized_physeq_phylum %>%  otu_table() %>% as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV") -> otu.table
+
+
+otu.table %>% rename(Phylum=ASV)  %>% mutate(Phylum = tax.table$Phylum) -> otu.table
+
+
+otu.table %>% pivot_longer(cols=!Phylum,names_to="SampleID",values_to="Relative_abundances") -> df
+
+
+
+
+normalized_physeq_phylum %>% 
+  sample_data()  %>% 
+as.matrix() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("SampleID") -> sample.data
+
+Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table))
+Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table))
+Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))
+
+df %>% mutate(Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table)),Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table)),Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))) -> df
+
+
+```
+
+
+
+```{r ,fig.height=15, fig.width=18 ,fig.align = "center"}
+df %>% mutate(Day_from_Inoculum=as.numeric(Day_from_Inoculum)) %>% arrange(Day_from_Inoculum)%>%  group_by(Day_from_Inoculum) ->df1
+df1 %>% 
+ggplot(aes(x=Day_from_Inoculum, y= Relative_abundances, fill=Phylum)) + 
+    geom_area(alpha=0.6 , size=.3, colour="white") +
+  facet_wrap(Reactor_Treatment~Enrichment,ncol=2) -> plot_phylum
+
+plot_phylum + geom_vline(xintercept = c(23,39),color="black",alpha=0.4)+theme_light() 
+
+  
+
+```
+
+### Class
+
+
+```{r}
+#fikter out low reads and continuous data and agglomerate
+ physeq.cont %>%  
+  subset_samples(sample_sums(physeq.cont) > 4576) %>% 
+  subset_samples(Experiment=="Continuous") %>% 
+ tax_glom(taxrank = "Class")  -> Class_physeq.cont
+
+
+#normalization
+Class_physeq.cont %>%   transform_sample_counts(function(x) x/sum(x) * 100) ->normalized_physeq_Class
+
+#get tax table,and otu table
+tax.table<-normalized_physeq_Class %>% tax_table() %>%  as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV")
+
+
+normalized_physeq_Class %>%  otu_table() %>% as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV") -> otu.table
+
+
+otu.table %>% rename(Class=ASV)  %>% mutate(Class = tax.table$Class) -> otu.table
+
+
+otu.table %>% pivot_longer(cols=!Class,names_to="SampleID",values_to="Relative_abundances") -> df
+
+
+
+
+normalized_physeq_Class %>% 
+  sample_data()  %>% 
+as.matrix() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("SampleID") -> sample.data
+
+Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table))
+Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table))
+Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))
+
+df %>% mutate(Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table)),Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table)),Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))) -> df
+```
+
+```{r,fig.height=15, fig.width=18 ,fig.align = "center"}
+df %>% mutate(Day_from_Inoculum=as.numeric(Day_from_Inoculum)) %>% arrange(Day_from_Inoculum)%>%  group_by(Day_from_Inoculum) ->df1
+df1 %>% 
+ggplot(aes(x=Day_from_Inoculum, y=Relative_abundances, fill=Class)) + 
+    geom_area(alpha=0.6 , size=.3, colour="white") +
+  facet_wrap(Reactor_Treatment~Enrichment,ncol=2) -> plot_Class
+
+plot_Class + geom_vline(xintercept = c(23,39),color="black",alpha=0.4)+theme_light() 
+
+  
+
+```
+
+
+
+###  Order
+
+
+```{r}
+#fikter out low reads and continuous data and agglomerate
+ physeq.cont %>%  
+  subset_samples(sample_sums(physeq.cont) > 4576) %>% 
+  subset_samples(Experiment=="Continuous") %>% 
+ tax_glom(taxrank = "Order")  -> Order_physeq.cont
+
+
+#normalization
+Order_physeq.cont %>%   transform_sample_counts(function(x) x/sum(x) * 100) ->normalized_physeq_Order
+
+#get tax table,and otu table
+tax.table<-normalized_physeq_Order %>% tax_table() %>%  as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV")
+
+
+normalized_physeq_Order %>%  otu_table() %>% as.matrix() %>% as.data.frame() %>% rownames_to_column("ASV") -> otu.table
+
+
+otu.table %>% rename(Order=ASV)  %>% mutate(Order = tax.table$Order) -> otu.table
+
+
+otu.table %>% pivot_longer(cols=!Order,names_to="SampleID",values_to="Relative_abundances") -> df
+
+
+
+
+normalized_physeq_Order %>% 
+  sample_data()  %>% 
+as.matrix() %>% 
+  as.data.frame() %>% 
+  rownames_to_column("SampleID") -> sample.data
+
+Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table))
+Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table))
+Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))
+
+df %>% mutate(Day_from_Inoculum =rep(sample.data$Day_from_Inoculum,nrow(tax.table)),Reactor_Treatment =rep(sample.data$Reactor_Treatment,nrow(tax.table)),Enrichment =  rep(sample.data$Enrichment,nrow(tax.table))) -> df
+```
+
+```{r,fig.height=15, fig.width=18 ,fig.align = "center"}
+df %>% mutate(Day_from_Inoculum=as.numeric(Day_from_Inoculum)) %>% arrange(Day_from_Inoculum)%>%  group_by(Day_from_Inoculum) ->df1
+df1 %>% 
+ggplot(aes(x=Day_from_Inoculum, y=Relative_abundances, fill=Order)) + 
+    geom_area(alpha=0.6 , size=.3, colour="white") +
+  facet_wrap(Reactor_Treatment~Enrichment,ncol=2) -> plot_Order
+
+plot_Order + geom_vline(xintercept = c(23,39),color="black",alpha=0.4)+theme_light() 
+
+  
+
+```
+
+
+
+

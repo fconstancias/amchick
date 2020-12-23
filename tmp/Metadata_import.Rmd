@@ -1,0 +1,114 @@
+---
+title: "metadata_import"
+author: "Sneha"
+date: "14/10/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages, results=FALSE,warning=FALSE, message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(readxl)
+
+```
+
+First import the phyloseq object.
+```{r} 
+
+#get the file path of 'phyloseq.RDS' 
+ps <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq.RDS"
+
+#load the phyloseq object
+ps %>% 
+  readRDS() -> physeq 
+
+
+```
+
+
+Import the excel file containing the metadata.
+```{r}
+#get file path of the metadata file (it is an excel file)
+md <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/p654_Alessia Pennacchia_sample sheet_file.xlsx"
+
+#load the metadata file, set na = 'NA' so that it does not read the NAs in the excel sheet as characters
+md %>% 
+  read_excel(na='NA') -> metadata  
+```
+
+
+We need to add the new columns in `metadata` to the existing columns in `sample_data(physeq)`. 
+
+First alphabetically arrange `metadata` by `Sample_name` to make sure we merge the dataframes correctly
+```{r }
+metadata %>% arrange(Sample_name) -> metadata
+
+#metadata
+```
+
+
+Get the `sample_data(physeq)` as a dataframe for merging
+```{r}
+physeq %>%  
+  sample_data() %>% 
+  as.matrix() %>%  
+  as.data.frame() %>% 
+  rownames_to_column(var="Sample_name") %>% 
+  arrange(Sample_name)-> sample.data 
+
+#sample.data
+```
+
+Check if the sample names match before merging
+
+```{r}
+all.equal(metadata$Sample_name,sample.data$Sample_name)
+```
+
+Merge the two dataframes (we add columns 2 to 25 of `sample.data` to `metadata`)
+```{r}
+metadata %>% 
+  mutate(sample.data[,2:25],) -> metadata
+
+#check dimensions
+dim(metadata)
+```
+
+`sample_data` had `Sample_name` as rownames . In order to match the format, we make sure that `metadata` also has rownames.
+```{r}
+metadata %>% 
+          column_to_rownames(var="Sample_name") -> metadata
+
+```
+
+Overwriting  `sample_data(physeq)` of the phyloseq object with `metadata`
+```{r}
+sample_data(physeq) <- metadata
+
+```
+
+Check if all is well 
+
+```{r}
+view(physeq %>% 
+  sample_data() %>% as.matrix() %>% as.data.frame())
+
+physeq %>% 
+  sample_data() %>% dim()
+      
+```
+
+Saving the new updated physeq object
+```{r}
+#store the path where you want the new physeq object
+out.path <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020"
+physeq_update <- physeq
+saveRDS(physeq_update,file = file.path(out.path,"physeq_update.RDS"))
+
+#sample_data(physeq)
+```

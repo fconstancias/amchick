@@ -1,0 +1,217 @@
+---
+title: " presence/absence enrichments -> van "
+author: "Florentin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+```{r setup, include=TRUE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r packages,warning=FALSE,message=FALSE,error=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(zCompositions)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+
+```
+
+The package is in progress but we do not actually need one, we can directly source the functions from github - **internet connection needed**:
+```{r sourcing, results=FALSE, warning=FALSE, include=TRUE}
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R") 
+```
+
+
+```{r}
+ps = "../data/processed/physeq_update_23_11.RDS"
+
+ps %>% 
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+```  
+
+```{r, message = FALSE}
+physeq
+```
+
+```{r, message = FALSE}
+physeq %>%
+  subset_samples(Experiment == "Continuous" &
+                  Enrichment == "Enriched" ) -> physeq_enriched
+
+sample_data(physeq_enriched)$Block = ifelse(sample_data(physeq_enriched)$Treatment %in% c("CTX", "CTX+HV292.1", "HV292.1"), "Exp CTX", "Exp Van")
+```
+
+
+```{r fig.height=16, fig.width=10 ,fig.align = "center", message = TRUE, warning= TRUE}
+physeq_enriched %>%
+  rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "percent",
+                          group_by = "Reactor_Treatment",
+                          facet_by = c("Reactor_Treatment","Enrichment", "Block", "Reactor", "Treatment", "Experiment" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 600) -> p
+
+p + facet_grid( ~ Block + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+
+```{r fig.height=20, fig.width=30 ,fig.align = "center", message = TRUE, warning= TRUE}
+physeq_enriched %>%
+  rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "percent",
+                          group_by = "Day_of_Treatment",
+                          facet_by = c("Reactor_Treatment","Enrichment", "Block", "Reactor", "Treatment", "Experiment" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 600) -> p
+
+p + facet_grid( ~ Block + Reactor_Treatment, scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+
+
+# Let's consider presence absence: what is not present in control but not in other ones.
+
+## Define a function:
+
+```{r, message = FALSE}
+ultimate_function <- function(tmp,
+                              venn_column,
+                              cut_a = 0,
+                              cut_f = 100,
+                              groups,
+                              group_by = "Day_of_Treatment",
+                              facet_by = c("Reactor_Treatment","Enrichment", "Reactor", "Treatment", "Experiment" ),
+                              ntax = 600)
+{
+  
+tax_table(tmp) <- tax_table(tmp)[,c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Strain")]
+colnames(tax_table(tmp)) = c("Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+
+tmp %>%
+  phyloseq_to_ampvis2() %>%
+  amp_venn(group_by = venn_column, cut_a = cut_a, cut_f = cut_f, detailed_output = TRUE) -> venn_p
+
+venn_p$Otutable %>%
+  dplyr::select(-Kingdom:-Genus) %>%
+  dplyr::filter(Shared %in% !!groups) -> df
+
+df %>%
+  dplyr::pull(OTU) -> ASV
+
+
+# prune_taxa(ASV,
+#              tmp) %>%  
+#   phyloseq_ampvis_heatmap(transform = "none",
+#                           group_by = group_by,
+#                           facet_by = facet_by,
+#                           tax_aggregate = "Species",
+#                           tax_add = NULL,
+#                           ntax  = ntax) + 
+#     scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+#                        labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+#                        trans = scales::pseudo_log_trans(sigma = 0.001),
+#                        na.value = 'transparent') -> p
+
+return(list("venn_plot" = venn_p$plot + ggtitle(paste0("cut_a: ", cut_a, " cut_f: ", cut_f)) ,
+            "filter_df" = df,
+            "plot_reactor" = p))
+}
+```
+
+## Test on Van dataset
+
+```{r, message = FALSE}
+physeq_enriched %>%
+  rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  subset_samples(Block == "Exp Van") %>%
+  subset_samples(Reactor %in% c("CR", "TR5", "TR6")) %>%
+  transform_sample_counts(function(x) x/sum(x) * 100) -> tmp
+
+ultimate_function(tmp,
+                    venn_column = "Reactor",
+                    cut_a = 0,
+                    cut_f = 100,
+                    groups = c(c("TR6", "TR5", "TR5_TR6"))) -> test
+```
+
+
+venn diagram:
+
+
+```{r, message = FALSE}
+ 
+test$venn_plot
+```
+
+
+heatmap of enriched:
+
+```{r, message = FALSE}
+  prune_taxa(test$filter_df %>% pull("OTU"),
+             tmp) %>%  
+  phyloseq_ampvis_heatmap(transform = "none",
+                          group_by = "Day_of_Treatment",
+                          facet_by = c("Reactor_Treatment","Enrichment", "Block", "Reactor", "Treatment", "Experiment" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 600) -> p
+
+p + facet_grid( ~ Block + Reactor_Treatment, scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+
+abundance overtime in reactors
+
+
+```{r fig.height=6, fig.width=16 ,fig.align = "center", message = TRUE, warning= TRUE}
+physeq %>%
+  subset_samples(Experiment == "Continuous" &
+                  Enrichment == "NotEnriched") %>%
+  subset_samples(Reactor %in% c("CR", "TR5", "TR6")) %>%
+  rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  transform_sample_counts(function(x) x/sum(x) * 100) %>%
+  plot_taxa_abundances_over_time(taxa_level = "Strain",
+                                  taxa_to_plot = test$filter_df %>% pull("Species"),
+                                 time_column = "Day_of_Treatment",
+                                 axis_transform = FALSE,
+                                 transformation = FALSE,
+                                 data_facet1 = "Reactor") -> p
+
+p$plot + ylab("Proportion") + geom_vline(xintercept = 1, colour = "red") + theme_light()
+```
+
+
+# Next: 
+
+- summarise with diff cutoffs
+- van + CTX maybe another .RMD file and other html as well?
+- not presence absence but fold change (with Sneha using Deseq2)

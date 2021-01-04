@@ -26,20 +26,13 @@ options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issue
 
 The package is in progress but we do not actually need one, we can directly source the functions from github - **internet connection needed**:
 ```{r sourcing, results=FALSE, warning=FALSE, include=TRUE}
-# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R") 
-# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R") 
-# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R") 
-# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R") 
-# source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
 ```
 
-```{r, results=FALSE, warning=FALSE, include=TRUE}
-source("~/Documents/GitHub/DivComAnalyses/R/phyloseq_taxa_tests.R") 
-source("~/Documents/GitHub/DivComAnalyses/R/phyloseq_normalisation.R") 
-source("~/Documents/GitHub/DivComAnalyses/R/phyloseq_alpha.R") 
-source("~/Documents/GitHub/DivComAnalyses/R/phyloseq_beta.R") 
-source("~/Documents/GitHub/DivComAnalyses/R/phyloseq_heatmap.R") 
-```
 
 # Load data nicely (using here::here()):
 

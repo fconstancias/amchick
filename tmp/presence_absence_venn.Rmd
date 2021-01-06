@@ -1,8 +1,12 @@
 ---
-title: " presence/absence enrichments"
+title: " presence-absence-enrichments "
 author: "Florentin"
-date: "`r Sys.Date()`"
-output: html_document
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
 ---
 ```{r setup, include=TRUE}
 rm(list = ls()) # remove all the object before starting
@@ -307,7 +311,7 @@ ggpubr::get_legend(p) %>% ggpubr::as_ggplot()
 
 
 ```{r fig.height=6, fig.width=14 ,fig.align = "center", message = TRUE, warning= TRUE}
-c$VAN$plot_reactor   + scale_y_log10() + facet_grid(Reactor ~ Data) -> p 
+c$VAN$plot_reactor + scale_y_log10() + facet_grid(Reactor ~ Data) -> p 
 
 p  + theme(legend.position="none")
 ```

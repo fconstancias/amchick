@@ -2,8 +2,6 @@
 title: " alpha-diversity "
 author: "Florentin"
 date: '`r format(Sys.time(), "%d %B, %Y")`'
-# knit: (function(inputFile, encoding) {rmarkdown::render(inputFile, encoding = encoding, output_file = paste0(substr(inputFile,1,nchar(inputFile)-4),Sys.Date(),'.html')) })
-# knit: (function(inputFile, encoding) { rmarkdown::render(inputFile, encoding = encoding, output_file = paste0('Math-', (format(Sys.Date() - lubridate::wday(Sys.Date() + 1), '%m-%d-%Y')), '.html')) })
 
 output: 
   html_document: 

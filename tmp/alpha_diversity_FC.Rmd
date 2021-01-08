@@ -88,11 +88,27 @@ ps_polyFermS_rare %>%
 
 
 Plotting a bar plot of the different diversity indices 
-```{r,fig.align="center", warning = FALSE, message = FALSE, results = FALSE}
+```{r,fig.height=16, fig.width=16, warning = FALSE, message = FALSE, results = FALSE}
 measures = c("Observed", "diversity_shannon", "evenness_pielou", "PD","MNTD", "SES.MPD" ,"bNTI")
 
+# define a function to plot scatter plot
+my_fn <- function(data, mapping, ...){
+  p <- ggplot(data = data, mapping = mapping) +
+    geom_point() +
+    geom_smooth(method=lm, ...)
+  p
+}
+
+
 alpha_df %>%
-  GGally::ggpairs(columns = measures) -> p_corr
+  GGally::ggpairs(columns = measures,
+                  ggplot2::aes(colour = Reactor),
+                  # legend = 1,
+                  progress = FALSE,
+                  upper = list(
+                    continuous = GGally::wrap('cor', method = "spearman")
+                  ),
+                  lower = list(continuous = my_fn)) -> p_corr
 
 p_corr
 ```
@@ -227,6 +243,69 @@ ggpubr::ggarrange(p5 + ylab(NULL) + xlab(NULL),
                   common.legend = TRUE) -> bigp_2
 
 bigp_2
+```
+
+
+```{r}
+plot_time <- function(df, 
+                      measure,
+                      x = "Day_from_Inoculum", 
+                      y = "value", 
+                      shape = "neg",
+                      fill = "Reactor_Treatment",
+                      group = "Reactor_Treatment", 
+                      facet)
+{
+  df %>%
+  dplyr::filter(alphadiversiy %in% measure) %>%
+  dplyr::mutate(alphadiversiy = fct_reorder(alphadiversiy, value, .desc = TRUE)) %>%
+  dplyr::mutate(neg = ifelse(value == 0, "neg", "pos")) %>%
+  arrange(Day_from_Inoculum) %>%
+  ggplot(aes_string(x = x,
+                    y = y)) +
+  geom_jitter(size=0.5, alpha=0.9, aes_string(color = fill, fill = fill, shape = shape),  show.legend = TRUE) + 
+  geom_path(inherit.aes = TRUE, aes_string(fill = fill, color = fill, show.legend = FALSE),
+            size = 0.005,
+            linetype = "dashed") +
+  facet_grid(as.formula(facet), scales = "free") +
+  geom_vline(xintercept = c(23,39), 
+             color="black", alpha=0.4) + 
+  geom_smooth(show.legend = FALSE, level = 0.95, alpha=0.05, size = 0.5 ,aes_string(color = fill, fill = fill)) +
+  scale_x_continuous(breaks=seq(0,90,10)) +
+  # scale_y_continuous(labels = scientific,
+  #                    limits=c(1e+10, 1e+11), breaks = seq(1e+10, 1e+11, by = 1e+10),
+  #                    trans = "log10") +
+  theme_light() +
+  scale_color_viridis_d(na.value = "black") +
+  scale_fill_viridis_d(na.value = "black") -> plot
+
+  return(plot + theme(legend.position = "bottom"))
+}
+
+```
+
+
+```{r, fig.align="center", fig.height=12, fig.width=10, warning = FALSE, message = FALSE, results = FALSE}
+out$plot$data %>%
+  dplyr::filter(Enrichment == "NotEnriched") %>%
+  plot_time(measure = measures,
+            facet = c("alphadiversiy ~ ."),
+            shape = NULL) + 
+  labs(x="Day (from Inoculum)", y= "alpha-diversity",  
+       col=NULL, fill = NULL, shape = NULL) -> p5
+
+p5
+```
+```{r}
+p5 %>%
+  plotly::ggplotly() -> p5ly
+
+p5ly
+htmlwidgets::saveWidget(as_widget(p5ly), 
+  paste0(here::here(),
+                    "/data/processed/",
+       "alpha_",
+       format(Sys.time(), "%Y%b%d"),".html"))
 ```
 
 ```{r}

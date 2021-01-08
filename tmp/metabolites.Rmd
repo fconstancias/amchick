@@ -43,7 +43,7 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 
 
 ```{r}
-ps = "~/Documents/GitHub/amchick/data/processed/physeq_update_23_11.RDS"
+ps = "data/processed/physeq_update_23_11.RDS"
 
 ps %>% 
   here::here() %>%
@@ -59,7 +59,7 @@ physeq@sam_data %>%
   data.frame() %>%
   rownames_to_column('id') %>%
   left_join(
-    "~/Documents/GitHub/amchick/data/raw/hplc Fermentation (Salvato automaticamente).xlsx" %>%
+    "data/raw/hplc Fermentation (Salvato automaticamente).xlsx" %>%
       readxl::read_xlsx(sheet = "All total"),
     by = c("Sample_description" = "Sample_Id")) %>%
   column_to_rownames('id') %>% 
@@ -214,7 +214,7 @@ plot_time <- function(df,
                     y = y)) +
   geom_jitter(size=0.5, alpha=0.9, aes_string(color = fill, fill = fill, shape = shape),  show.legend = TRUE) + 
   geom_path(inherit.aes = TRUE, aes_string(fill = fill, color = fill, show.legend = FALSE),
-            size = 0.001,
+            size = 0.005,
             linetype = "dashed") +
   facet_grid(as.formula(facet), scales = "free") +
   geom_vline(xintercept = c(23,39), 
@@ -237,14 +237,26 @@ plot_time <- function(df,
 ```{r, fig.align="center", fig.height=12, fig.width=10, warning = FALSE, message = FALSE, results = FALSE}
 out$plot$data %>%
   plot_time(measure = c("Total_SCFA_mM", "Acetat_mM", "Butyrat_mM", "Propionat_mM", "Isobutyrat_mM", "Valerat_mM", "Isovalerat_mM", "Succinat_mM"),
-            facet = c("alphadiversiy ~ .")) + 
+            facet = c("alphadiversiy ~ ."),  shape = NULL) + 
   labs(x="Day (from Inoculum)", y= "SCFA concentration [mM]",  
        col=NULL, fill = NULL, shape = NULL) + 
   scale_shape_manual(values=c(4, 19)) -> p4
 
 p4
-
 ```
+
+```{r, fig.align="center"}
+p4 %>% ggplotly()
+
+htmlwidgets::saveWidget(as_widget(p4 %>% ggplotly()), 
+  paste0(here::here(),
+                    "/data/processed/",
+       "metabolites_",
+       format(Sys.time(), "%Y%b%d"),".html"))
+# htmlwidgets::saveWidget(as_widget(p4 %>% ggplotly()), paste0("~/Documents/index.html"))
+```
+
+
 ```{r, fig.align="center", fig.height=8, fig.width=12, warning = FALSE, message = FALSE, results = FALSE}
 p4 + 
   facet_null() +
@@ -299,7 +311,14 @@ p5
 
 ```{r}
 p5 %>%
-  plotly::ggplotly()
+  plotly::ggplotly() -> p5ly
+
+htmlwidgets::saveWidget(as_widget(p5ly), 
+  paste0(here::here(),
+                    "/data/processed/",
+       "metabolites_",
+       format(Sys.time(), "%Y%b%d"),"_2.html"))
+
 ```
 
 ```{r}

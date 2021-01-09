@@ -313,6 +313,8 @@ p5
 p5 %>%
   plotly::ggplotly() -> p5ly
 
+p5ly
+
 htmlwidgets::saveWidget(as_widget(p5ly), 
   paste0(here::here(),
                     "/data/processed/",

@@ -44,7 +44,7 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 
 
 ```{r}
-ps = "data/processed/physeq_update_23_11.RDS"
+ps = "data/processed/physeq_update_11_1_21.RDS"
 
 ps %>% 
   here::here() %>%

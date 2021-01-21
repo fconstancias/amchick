@@ -1,0 +1,290 @@
+---
+title: " before _ treatment Reactor variability "
+author: "Florentin"
+date: '`r format(Sys.time(), "%d %B, %Y")`'
+
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
+---
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Load functions from Github
+
+```{r}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+
+#### Load physeq object
+
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+
+
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2") -> ps_PolyFermS
+
+```  
+
+We will be analysing only the PolyFermS samples here so take a subset of the physeq object.  
+```{r}
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2") -> ps_polyFermS
+
+sample_data(ps_polyFermS)$Reactor <- fct_relevel(sample_data(ps_polyFermS)$Reactor, "IR1", "CR", "TR1", "TR2","TR3", "TR4", "TR5", "TR6") 
+
+sample_data(ps_polyFermS)$Treatment <- fct_relevel(sample_data(ps_polyFermS)$Treatment, "UNTREATED",  "CTX+HV292.1", "CTX","HV292.1","VAN+CCUG59168", "VAN",  "CCUG59168") 
+
+sample_data(ps_polyFermS)$Reactor_Treatment <- fct_relevel(sample_data(ps_polyFermS)$Reactor_Treatment, "IR1_UNTREATED","CR_UNTREATED", "CR_CTX", "CR_VAN", "TR1_CTX+HV292.1","TR2_CTX", "TR3_HV292.1", "TR5_VAN+CCUG59168", "TR4_VAN", "TR6_CCUG59168") 
+
+ps_polyFermS %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123) -> ps_rare
+
+
+ps_rare %>%
+  subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(Day_from_Inoculum >= 22 & Day_from_Inoculum <= 38) -> ps_polyFermS_rare
+
+ps_polyFermS_rare
+```
+# Alpha div:
+
+Compute alpha-div metrics:
+
+```{r, message= FALSE, results= FALSE, warning=FALSE}
+ps_polyFermS_rare %>%
+  phyloseq_alphas(phylo = TRUE) -> alpha_df
+```
+
+```{r,fig.height=8, fig.width=6, warning = FALSE, message = FALSE, results = FALSE}
+measures = c("Observed", "diversity_shannon", "evenness_pielou", "PD","MNTD", "SES.MPD" ,"bNTI")
+
+
+alpha_df %>%
+  plot_alphas(measure = measures,
+             x_group = "Reactor_Treatment",
+             colour_group = "Reactor",
+             fill_group = "Reactor",
+              shape_group = NULL,
+              facet_group = "Reactor_Treatment",
+            test_group = "Reactor_Treatment",
+            test_group_2 = NULL) -> out
+
+out$plot + 
+  facet_null() + 
+  facet_grid(alphadiversiy ~ ., scales = "free") + 
+  ggpubr::rotate_x_text(60) +
+  scale_fill_viridis_d() +
+  scale_color_viridis_d()
+
+out$stat %>%
+  dplyr::filter(signif == "SIGN") %>%
+  DT::datatable()
+```
+
+# Beta-div:
+
+Compute beta-div metrics:
+
+
+```{r,fig.align="center", warning = FALSE, message = FALSE, results = FALSE}
+ps_polyFermS_rare  %>%
+  phyloseq_plot_bdiv(bdiv_list,
+                     m = "CoDa",
+                     seed = 123) -> coda
+  
+coda$PCA$layers[[1]] = NULL
+
+coda$PCA + geom_point(size=2,
+                   aes(color = Reactor_Treatment, 
+                       fill = Reactor_Treatment,
+                       shape = NULL,
+                       alpha = Day_from_Inoculum)) + 
+  theme_light() +
+  # geom_path(arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")),
+              # size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment), show.legend = FALSE) +
+  scale_alpha_continuous(range=c( 0.9, 0.3)) + scale_color_viridis_d(na.value = "black") +
+  scale_fill_viridis_d(na.value = "black") + 
+  # scale_shape_manual(values = c(8, 21, 22, 23, 24, 16, 15, 18, 17)) + 
+  theme_classic() +
+    labs(col=NULL, fill = NULL, shape = NULL) + guides(shape=FALSE) -> p1
+
+p1
+```
+
+```{r,fig.align="center"}
+p1 %>%
+  ggplotly() -> p1ply
+
+p1ply
+```
+
+```{r}
+ps_polyFermS_rare %>%
+  phyloseq_compute_bdiv(norm = "pc",
+                        phylo = TRUE,
+                        seed = 123) -> bdiv_list
+
+bdiv_list$coda <- coda$physeq_clr %>% phyloseq::distance(method = "euclidean")
+
+```
+
+```{r}
+phyloseq_plot_bdiv(dlist = bdiv_list, # list of distance computed from a phyloseq object
+                   ps_rare = ps_polyFermS_rare, # phyloseq object
+                   m = "PCoA", # PCoA or NMDS
+                   seed = 123, # for reproducibility
+                   axis1 = 1, # axis to plot
+                   axis2 = 2) -> plot_list
+```                  
+
+```{r}
+plot_list$bray = NULL; plot_list$d_0 = NULL; plot_list$d_0.5 = NULL
+
+plot_list %>%
+  phyloseq_plot_ordinations_facet(color_group = "Reactor_Treatment",
+                                 shape_group = NULL) +
+  scale_color_viridis_d(na.value = "black") +
+  scale_fill_viridis_d(na.value = "black") 
+```
+
+```{r}
+plot_list %>%
+  phyloseq_ordinations_expl_var()
+```
+
+```{r,fig.height=10, fig.width=8, warning = FALSE, message = FALSE, results = FALSE}
+ps_polyFermS_rare %>%
+  phyloseq_distance_boxplot(bdiv_list$coda ,
+                            d = "Reactor_Treatment") -> dist_box
+
+
+dist_box$plot
+```
+```{r}
+
+  lapply(
+  bdiv_list,
+  FUN = physeq_pairwise_permanovas,
+  physeq = ps_polyFermS_rare,
+  compare_header = "Reactor_Treatment",
+  n_perm = 999,
+  strat = FALSE
+) %>%
+  bind_rows(.id = "Distance") %>%
+  mutate_if(is.numeric, round, 3) %>%
+  # filter(! terms %in% (c("Residuals", "Total"))) %>%
+  DT::datatable()
+```
+
+
+# Taxa Heatmap:
+```{r fig.height=3, fig.width=10 ,fig.align = "center", message = TRUE, warning= TRUE}
+ps_polyFermS_rare %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "percent",
+                          group_by = "Day_from_Inoculum",
+                          facet_by = c("Enrichment", "Phase", "Reactor", "Treatment", "Experiment", "Reactor_Treatment" ),
+                          tax_aggregate = "Class",
+                          tax_add = NULL,
+                          ntax  = 60) -> p
+
+p + facet_grid( ~ Reactor_Treatment + Phase , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+```{r fig.height=10, fig.width=14 ,fig.align = "center", message = TRUE, warning= TRUE}
+ps_polyFermS_rare %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "percent",
+                          group_by = "Day_from_Inoculum",
+                          facet_by = c("Enrichment", "Phase", "Reactor", "Treatment", "Experiment", "Reactor_Treatment" ),
+                          tax_aggregate = "Genus",
+                          tax_add = NULL,
+                          ntax  = 60) -> p
+
+p + facet_grid( ~ Reactor_Treatment + Phase , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+
+```{r fig.height=10, fig.width=14 ,fig.align = "center", message = TRUE, warning= TRUE}
+ps_polyFermS_rare %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "percent",
+                          group_by = "Day_from_Inoculum",
+                          facet_by = c("Enrichment", "Phase", "Reactor", "Treatment", "Experiment", "Reactor_Treatment" ),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 60) -> p
+
+p + facet_grid( ~ Reactor_Treatment + Phase , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+p2
+```
+
+```{r}
+paste0(here::here(),
+       "/data/processed/",
+       "stab",
+       "_",
+       format(Sys.time(), "%Y%b%d")
+       ,".RData") %>% save.image()
+# load("/Users/fconstan/Projects/EZe/ASV/260420.RData")
+```
+
+
+```{r}
+sessionInfo()
+```
+

@@ -21,7 +21,7 @@ First import the phyloseq object.
 ```{r} 
 
 #get the file path of 'phyloseq.RDS' 
-ps <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/physeq.RDS"
+ps <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020/physeq.RDS"
 
 #load the phyloseq object
 ps %>% 
@@ -34,8 +34,7 @@ ps %>%
 Import the excel file containing the metadata.
 ```{r}
 #get file path of the metadata file (it is an excel file)
-md <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020/p654_Alessia Pennacchia_sample sheet_file.xlsx"
-
+md <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020/p654_Alessia Pennacchia_sample sheet_file_25.01.2021.xlsx"
 #load the metadata file, set na = 'NA' so that it does not read the NAs in the excel sheet as characters
 md %>% 
   read_excel(na='NA') -> metadata  
@@ -70,6 +69,8 @@ Check if the sample names match before merging
 all.equal(metadata$Sample_name,sample.data$Sample_name)
 ```
 
+
+
 Merge the two dataframes (we add columns 2 to 25 of `sample.data` to `metadata`)
 ```{r}
 metadata %>% 
@@ -78,6 +79,7 @@ metadata %>%
 #check dimensions
 dim(metadata)
 ```
+
 
 `sample_data` had `Sample_name` as rownames . In order to match the format, we make sure that `metadata` also has rownames.
 ```{r}
@@ -92,23 +94,55 @@ sample_data(physeq) <- metadata
 
 ```
 
+Creating factor variables out of all the metadata columns so that the levels are in the order we specify. 
+
+```{r}
+
+sample_data(physeq)$Experiment <- fct_relevel(sample_data(physeq)$Experiment, "NTC","Mock", "HV292.1", "CCUG59168", "Cecum","Continuous","Batch") 
+
+
+sample_data(physeq)$Treatment <- fct_relevel(sample_data(physeq)$Treatment,"negative","positive","STRAIN", "DONOR", "UNTREATED", "CTX", "CTX+HV292.1", "HV292.1", "VAN", "VAN+CCUG59168", "CCUG59168")
+
+
+sample_data(physeq)$Reactor <- fct_relevel(sample_data(physeq)$Reactor,"negative","positive","STRAIN", "DONOR", "IR1", "IR2", "CR", "TR1", "TR2", "TR3", "TR4", "TR5", "TR6","Batch3","Batch4")
+
+
+sample_data(physeq)$Reactor_Treatment <- fct_relevel(sample_data(physeq)$`Reactor_Treatment`,"negative","positive","STRAIN","DONOR", "IR1_UNTREATED","IR2_UNTREATED","CR_UNTREATED","CR_CTX","CR_VAN","TR1_CTX+HV292.1", "TR2_CTX", "TR3_HV292.1", "TR4_VAN","TR5_VAN+CCUG59168","TR6_CCUG59168","Batch3_UNTREATED","Batch3_CTX+HV292.1","Batch3_CTX","Batch3_HV292.1","Batch4_UNTREATED","Batch4_VAN","Batch4_VAN+CCUG59168","Batch4_CCUG59168")
+
+sample_data(physeq)$Enrichment <- fct_relevel(sample_data(physeq)$Enrichment, "NotEnriched","Enriched") 
+
+#sample_data(physeq)$Phase  
+sample_data(physeq)$Phase<-factor(x=sample_data(physeq)$Phase,levels=c( "STRAIN","DONOR","Stab","Treat"),exclude=NULL)
+
+
+sample_data(physeq)$Treatment2<-factor(x=sample_data(physeq)$Treatment2,levels=c("negative","positive","STRAIN", "DONOR","UNTREATED","AB","AB+E. coli","E. coli","AB+E. faecium","E. faecium"),exclude=NULL)
+
+sample_data(physeq)$Batch_hour<-factor(x=sample_data(physeq)$Batch_hour,levels=c( "STRAIN","DONOR","0","7","24"),exclude=NULL)
+
+
+sample_data(physeq)$plate <- fct_relevel(sample_data(physeq)$plate, "P1","P2","P3","P4") 
+```
+
+
 Check if all is well 
 
 ```{r}
-view(physeq %>% 
-  sample_data() %>% as.matrix() %>% as.data.frame())
+ as(sample_data(physeq),"matrix") %>%
+         data.frame(check.names=FALSE) %>%
+         rownames_to_column("Sample_ID") %>% dim()
 
-physeq %>% 
-  sample_data() %>% dim()
-      
 ```
 
 Saving the new updated physeq object
 ```{r}
 #store the path where you want the new physeq object
-out.path <- "/Users/snehasundar/Desktop/amchick/metabarcoding analysis_9_10_2020"
+out.path <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020"
 physeq_update <- physeq
+
 saveRDS(physeq_update,file = file.path(out.path,"physeq_update.RDS"))
 
 #sample_data(physeq)
 ```
+
+
+

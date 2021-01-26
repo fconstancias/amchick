@@ -50,3 +50,4 @@ vignettes/*.pdf
 *.stats
 *.swarms
 *.struct
+.DS_Store

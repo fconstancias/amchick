@@ -51,3 +51,4 @@ vignettes/*.pdf
 *.swarms
 *.struct
 .DS_Store
+.DS_Store

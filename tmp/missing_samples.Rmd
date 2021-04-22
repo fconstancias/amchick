@@ -1,0 +1,116 @@
+---
+title: "Missing samples?"
+author: "Sneha Sundar"
+date: "r format(Sys.time(), '%B %d, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+library(tidyHeatmap)
+library(here)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Source required functions
+
+```{r message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+
+#### Import phyloseq object
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() -> physeq
+  #phyloseq_get_strains_fast() %>%
+  #phyloseq_remove_chloro_mitho() > physeq
+
+
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor %!in% c("IR2")) -> ps_PolyFermS
+
+ps_PolyFermS
+```
+
+We need a heatmap 
+```{r}
+ampvis_physeq<-phyloseq_to_ampvis2(ps_PolyFermS)
+
+p<-amp_heatmap(data=ampvis_physeq,
+               #group_by = group_by,#treatment
+                #facet_by = facet_by,
+                normalise = TRUE,
+                plot_values = FALSE,
+                plot_values_size = 2,
+                tax_show = 300,
+                 order_x_by = "cluster",
+                min_abundance = 0,
+                tax_aggregate = "Family",
+                tax_add = NULL,
+                plot_na = FALSE,
+                color_vector = c("white", "red"),
+                plot_colorscale = "sqrt",
+                plot_legendbreaks = c(1, 10, 20))
+
+  p + theme_classic() + 
+    theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 5)) + 
+    theme(axis.text.y = element_text(angle = 0,  size = 8)) -> p
+  
+
+p
+```
+
+
+```{r}
+
+ps_PolyFermS %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123) -> ps_polyFermS_rare
+```
+
+```{r}
+ps_polyFermS_rare %>%
+  phyloseq_compute_bdiv(norm = "pc",
+                        phylo = TRUE,
+                        seed = 123) -> bdiv_list
+```
+
+
+```{r}
+hc<-hclust(bdiv_list$bray,method="average")
+
+par(cex=0.5, mar=c(12, 8, 4, 1))
+plot(hc, xlab="", ylab="", main="", sub="", axes=FALSE)
+par(cex=1)
+title(xlab="Sample_name", ylab="", main="Cluster dendogram")
+axis(2)
+```
+

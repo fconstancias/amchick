@@ -1,0 +1,241 @@
+---
+title: "Increasing_ASVs"
+author: "Sneha Sundar"
+date: "`r format(Sys.time(), "%a %b %d %X %Y")`"
+output: html_document
+---
+
+
+Load required packages
+```{r message = FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+library(here)
+library(UpSetR)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+library(scales)
+```
+
+Load required functions
+```{r}
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+Load phyloseq object
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+#taxa_names(physeq)  <- tax_table(physeq)[,"Strain"]
+```
+
+We want only continuous samples. 
+```{r}
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2") -> ps_polyFermS
+```
+
+Rarefying the data
+```{r}
+ps_polyFermS %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123) -> ps_rare
+```
+
+Taking only the unenriched samples, getting rid of dubious samples and taking only the the days we are interested in(8 days before treatment and 15 days after treatment)
+```{r}
+ps_rare %>%
+  subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% # heatmap reavels they might be comming from VAN treated or enrichments
+  subset_samples(Day_from_Inoculum >= 30 & Day_from_Inoculum <= 54) -> ps_polyFermS_rare
+
+
+```
+
+
+
+For every ASV in every reactor plot proportions and see if the trend is increasing in the first 15 days. 
+
+```{r}
+ps_polyFermS_rare %>% phyloseq_density_normalize(value_idx  = "GeneCopyNumberperML") -> norm_ps_polyFermS_rare
+
+taxa<-norm_ps_polyFermS_rare %>% taxa_names()
+
+
+```
+
+```{r}
+log10p_trans<-function(){trans_new(name="log10p",
+                                   transform=function(x){return(log10(x+1))},inverse=function(xt){return((10^xt) - 1)})}
+  
+sample_data(physeq)[['Reactor_Treatment']]
+```
+
+
+```{r}
+
+
+out<-plot_taxa_abundances_over_time(physeq = norm_ps_polyFermS_rare, taxa_level = "Species", 
+                                                  taxa_to_plot= c("ASV086"),
+                                                  time_column = 'Day_from_Inoculum',
+                                                  other_columns_to_plot=NULL ,
+                                                  axis_transform=FALSE,
+                                                  transformation = 'log1p',
+                                                  plot_total = FALSE,
+                                                  data_facet1='Reactor_Treatment',
+                                                  data_facet2=NULL,
+                                                  n_facet_row=4,
+                                                  n_facet_col=4)
+
+plot<-ggplot(data=out$plot.df,mapping=aes(color=Data))+
+        geom_point(mapping=aes(x=Day_from_Inoculum,y=Abundances),alpha=0.8)+
+        geom_smooth(mapping=aes(x=Day_from_Inoculum,y=Abundances),method='lm')+
+        facet_wrap(~Reactor_Treatment)
+scale_y_continuous(trans=log10p_trans())
+plot  +scale_y_continuous(trans=log10p_trans())+ geom_vline(xintercept = c(39,54),color="black",alpha=0.4) + theme_light()
+```
+
+```{r}
+
+keep_ASV<- function(taxa_name,sub,fraction){
+  return(sum(otu_table(sub)[taxa_name]>0) >= floor(nsamples(sub)*fraction))
+   }
+
+#Say there are 30 samples in TR5. If at least 10 samples have a non-zero value for ASVxxx I will consider the ASV. otherwise i discard the ASV for that particular reactor.
+remove_ASVs_from_reactor <- function(physeq, fraction, col_name, value_to_subset){
+  #take only the samples we want to look at .
+  is_value_to_subset = sample_data(physeq)[[col_name]] == value_to_subset
+  subset_physeq<- prune_samples(is_value_to_subset,physeq)
+  #remove taxa that are not present in all samples
+  subset_physeq <- prune_taxa(taxa_sums(subset_physeq)>0,subset_physeq) 
+  keep<-sapply(taxa_names(subset_physeq),keep_ASV,subset_physeq,fraction)
+  return(prune_taxa(keep,subset_physeq))
+}
+```
+
+```{r}
+sub<-remove_ASVs_from_reactor(norm_ps_polyFermS_rare,0.33,'Reactor_Treatment','TR1_CTX+HV292.1')
+sub
+```
+```{r}
+
+out<-plot_taxa_abundances_over_time(physeq = sub, taxa_level = "Species", 
+                                                  taxa_to_plot= taxa_names(sub)[3],
+                                                  time_column = 'Day_from_Inoculum',
+                                                  other_columns_to_plot=NULL ,
+                                                  axis_transform=FALSE,
+                                                  transformation = 'log1p',
+                                                  plot_total = FALSE,
+                                                  data_facet1='Reactor_Treatment',
+                                                  data_facet2=NULL,
+                                                  n_facet_row=4,
+                                                  n_facet_col=4)
+out$plot
+
+
+plot<-ggplot(data=out$plot.df,mapping=aes(color=Data))+
+        geom_point(mapping=aes(x=Day_from_Inoculum,y=Abundances),alpha=0.8)+
+        geom_smooth(mapping=aes(x=Day_from_Inoculum,y=Abundances),method='lm')+
+        facet_wrap(~Reactor_Treatment)
+
+plot  +scale_y_continuous(trans=log10p_trans())+ geom_vline(xintercept = c(39,54),color="black",alpha=0.4) + theme_light()
+
+
+coef(lm(out$plot.df[['Abundances']]~out$plot.df[['Day_from_Inoculum']]))[2]
+```
+```{r}
+get_trend_ASV <- function(taxaname,physeq,time_col,facet_col ){
+  
+  out<-plot_taxa_abundances_over_time(physeq = physeq, taxa_level = "Species", 
+                                                  taxa_to_plot= taxaname,
+                                                  time_column = time_col,
+                                                  other_columns_to_plot=NULL ,
+                                                  axis_transform=FALSE,
+                                                  transformation = 'log1p',
+                                                  plot_total = FALSE,
+                                                  data_facet1=facet_col,
+                                                  data_facet2=NULL,
+                                                  n_facet_row=4,
+                                                  n_facet_col=4)
+
+
+
+
+
+return(coef(lm(out$plot.df[['Abundances']]~out$plot.df[['Day_from_Inoculum']]))[2])
+  
+}
+
+trend<-sapply(taxa_names(sub),get_trend_ASV,sub,'Day_from_Inoculum','Reactor_Treatement')
+
+
+names(trend) <- tax_table(sub)[taxa_names(sub),'Strain']
+#increasing_ASVs
+names(which(trend >0))
+```
+
+```{r}
+
+reactors<-norm_ps_polyFermS_rare %>% get_variable('Reactor_Treatment') %>% as.vector() %>% unique()
+reactor_trends = vector("list", length(reactors))
+ASV_sets <- vector("list", length(reactors))
+names(reactor_trends) <- reactors
+names(ASV_sets) <- reactors
+for(reactor in reactors){
+  
+  sub<-remove_ASVs_from_reactor(norm_ps_polyFermS_rare,0.33,'Reactor_Treatment',reactor)
+  
+  lm_coef<-sapply(taxa_names(sub),get_trend_ASV,sub,'Day_from_Inoculum','Reactor_Treatment')
+  names(lm_coef) <- tax_table(sub)[taxa_names(sub),'Strain']
+  
+  trend = list('Increasing' = names(which(lm_coef >0)),'Decreasing'=names(which(lm_coef <0)),'Constant'=names(which(lm_coef==0)))
+  ASV_sets[[reactor]] = names(lm_coef)
+  reactor_trends[[reactor]] = trend
+}
+
+reactor_trends$CR_UNTREATED
+```
+
+
+```{r}
+names(ASV_sets)
+ASV_sets[c(1,3,4,5)]
+```
+
+#how to generate an upset plot now. 
+
+```{r}
+
+upset(fromList(ASV_sets[c(1,6,7,8)]), order.by = "freq",nsets = 4,nintersects=NA,keep.order=TRUE)
+```
+
+```{r}
+(upset_ctx<-upset(fromList(ASV_sets[c(1,3,4,5)]), order.by = "freq",nsets = 4,nintersects=NA,keep.order=TRUE))
+
+
+```
+```{r}
+fromList(ASV_sets[c(1,3,4,5)])
+```
+

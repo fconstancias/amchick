@@ -47,6 +47,9 @@ ps %>%
 
 #taxa_names(physeq)  <- tax_table(physeq)[,"Strain"]
 ```
+```{r}
+physeq %>% subset_samples(Paul=="Paul")
+```
 
 We want only continuous samples. 
 ```{r}
@@ -58,12 +61,10 @@ physeq %>%
 
 Rarefying the data
 ```{r}
-ps_polyFermS %>% 
-  rarefy_even_depth(sample.size = 4576,
-                    rngseed = 123) -> ps_rare
+ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_rare
 ```
 
-Taking only the unenriched samples, getting rid of dubious samples and taking only the the days we are interested in(8 days before treatment and 15 days after treatment)
+Taking only the unenriched samples, getting rid of dubious samples and taking only the the days we are interested in (8 days before treatment and 15 days after treatment)
 ```{r}
 ps_rare %>%
   subset_samples(Enrichment == "NotEnriched") %>%
@@ -89,7 +90,7 @@ taxa<-norm_ps_polyFermS_rare %>% taxa_names()
 log10p_trans<-function(){trans_new(name="log10p",
                                    transform=function(x){return(log10(x+1))},inverse=function(xt){return((10^xt) - 1)})}
   
-sample_data(physeq)[['Reactor_Treatment']]
+#sample_data(physeq)[['Reactor_Treatment']]
 ```
 
 
@@ -136,7 +137,7 @@ remove_ASVs_from_reactor <- function(physeq, fraction, col_name, value_to_subset
 
 ```{r}
 sub<-remove_ASVs_from_reactor(norm_ps_polyFermS_rare,0.33,'Reactor_Treatment','TR1_CTX+HV292.1')
-sub
+
 ```
 ```{r}
 
@@ -236,6 +237,106 @@ upset(fromList(ASV_sets[c(1,6,7,8)]), order.by = "freq",nsets = 4,nintersects=NA
 
 ```
 ```{r}
-fromList(ASV_sets[c(1,3,4,5)])
+#fromList(ASV_sets[c(1,3,4,5)]
+union(ASV_sets[[1]],ASV_sets[[3]])
 ```
+
+## Looks like I need to create the upset plot myself.
+
+```{r}
+prune_taxa(taxa_sums(norm_ps_polyFermS_rare)>0,norm_ps_polyFermS_rare)
+```
+
+```{r}
+norm_ps_polyFermS_rare
+```
+```{r}
+
+asvs<-purrr::reduce(ASV_sets,union)
+
+lapply <- 
+```
+
+```{r}
+paul_samples <- c("IR2_10",
+"IR2_11",
+"IR2_12",
+"IR2_20",
+"IR2_21",
+"IR2_22",
+"IR1_10",
+"IR1_11",
+"IR1_12",
+"IR1_20",
+"IR1_21",
+"IR1_22",
+"IR1_30",
+"IR1_31",
+"IR1_32",
+"IR1_40",
+"IR1_41",
+"IR1_42",
+"IR1_50",
+"IR1_51",
+"IR1_52",
+"IR1_60",
+"IR1_61",
+"IR1_62",
+"IR1_70",
+"IR1_71",
+"IR1_72",
+"IR1_80",
+"IR1_81",
+"IR1_82",
+"IR1_86",
+"IR1_87",
+"IR1_88",
+"CR_6",
+"CR_7",
+"CR_8",
+"CR_9",
+"CR_10",
+"TR1_6",
+"TR1_7",
+"TR1_8",
+"TR1_9",
+"TR1_10",
+"TR2_6",
+"TR2_7",
+"TR2_8",
+"TR2_9",
+"TR2_10",
+"TR3_6",
+"TR3_7",
+"TR3_8",
+"TR3_9",
+"TR3_10",
+"TR4_6",
+"TR4_7",
+"TR4_8",
+"TR4_9",
+"TR4_10",
+"TR5_6",
+"TR5_7",
+"TR5_8",
+"TR5_9",
+"TR5_10",
+"TR6_6",
+"TR6_7",
+"TR6_8",
+"TR6_9",
+"TR6_10",
+"IR1_29",
+"IR1_31",
+"IR1_32",
+"IR1_33")
+
+
+
+physeq %>% subset_samples(Paul == "Paul") -> physeq.paul
+
+paul_in_meta<-sort(sample_data(physeq.paul)[['Sample_description']])
+
+```
+
 

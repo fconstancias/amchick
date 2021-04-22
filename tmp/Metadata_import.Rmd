@@ -14,18 +14,20 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(phyloseq)
 library(readxl)
-
+library(here)
 ```
 
 First import the phyloseq object.
 ```{r} 
 
 #get the file path of 'phyloseq.RDS' 
-ps <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020/physeq.RDS"
+ps <- "data/raw/metabarcoding/physeq.RDS"
 
 #load the phyloseq object
 ps %>% 
-  readRDS() -> physeq 
+  here::here() %>% 
+  readRDS() -> physeq
+  
 
 
 ```
@@ -34,9 +36,10 @@ ps %>%
 Import the excel file containing the metadata.
 ```{r}
 #get file path of the metadata file (it is an excel file)
-md <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020/p654_Alessia Pennacchia_sample sheet_file_25.01.2021.xlsx"
+md <- "data/raw/metabarcoding/p654_Alessia_Pennacchia_sample_sheet_file_11.01.2021.xlsx"
 #load the metadata file, set na = 'NA' so that it does not read the NAs in the excel sheet as characters
 md %>% 
+  here::here() %>% 
   read_excel(na='NA') -> metadata  
 ```
 
@@ -136,12 +139,11 @@ Check if all is well
 Saving the new updated physeq object
 ```{r}
 #store the path where you want the new physeq object
-out.path <- "/Users/snehasundar/Desktop/amchick/metabarcoding_analysis_9_10_2020"
+out.path <- "data/processed"
 physeq_update <- physeq
 
-saveRDS(physeq_update,file = file.path(out.path,"physeq_update.RDS"))
+saveRDS(physeq_update,file = file.path(here::here(out.path),"physeq_update_11_1_21.RDS"))
 
-#sample_data(physeq)
 ```
 
 

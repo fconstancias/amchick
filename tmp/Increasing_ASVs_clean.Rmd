@@ -36,6 +36,7 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 
 Load phyloseq object
 
+#NOTE @Alessia  you might need to change this if you do not have the a local version of the github amchick repo. If it does not work, let me/Florentin know. 
 ```{r}
 ps = "data/processed/physeq_update_11_1_21.RDS"
 
@@ -266,9 +267,13 @@ This is the order to keep in mind
 
 colnames(ctx_df)
 ```
+# If you have run all the code before this, you just need to change the set_combo argument to whatever reactor you want to look at (1 for considering the reactor, 0 for not considering it)
 
+Example: If I want to consider the ASVs in CR, TR3 then `set_combo = c(1,0,0,1)
+
+#some combinations might throw an error. This means there is no ASV belonging to that set. 
 ```{r}
-(t_ctx<-identify_asv_trends_in_set(set_combo=c(1,1,1,1),upset_df = ctx_df,vars = colnames(ctx_df),trends_object = reactor_trends))
+(t_ctx<-identify_asv_trends_in_set(set_combo=c(1,0,0,1),upset_df = ctx_df,vars = colnames(ctx_df),trends_object = reactor_trends))
 
 
 ```

@@ -7,7 +7,7 @@ output: html_document
 
 
 Load required packages
-```{r message = FALSE}
+```{r message = FALSE error = FALSE}
 library(tidyverse)
 library(phyloseq)
 library(speedyseq)
@@ -45,11 +45,9 @@ ps %>%
   phyloseq_get_strains_fast() %>%
   phyloseq_remove_chloro_mitho() -> physeq
 
-#taxa_names(physeq)  <- tax_table(physeq)[,"Strain"]
+
 ```
-```{r}
-physeq %>% subset_samples(Paul=="Paul")
-```
+
 
 We want only continuous samples. 
 ```{r}
@@ -60,7 +58,7 @@ physeq %>%
 ```
 
 Rarefying the data
-```{r}
+```{r message = FALSE}
 ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_rare
 ```
 
@@ -74,10 +72,7 @@ ps_rare %>%
 
 ```
 
-
-
-For every ASV in every reactor plot proportions and see if the trend is increasing in the first 15 days. 
-
+Normalize the otu counts with qPCR data
 ```{r}
 ps_polyFermS_rare %>% phyloseq_density_normalize(value_idx  = "GeneCopyNumberperML") -> norm_ps_polyFermS_rare
 
@@ -86,6 +81,7 @@ taxa<-norm_ps_polyFermS_rare %>% taxa_names()
 
 ```
 
+Scaling function log10(1+x). This is so that we can use a log scale in the graphs but still be able to handle 0 counts. 
 ```{r}
 log10p_trans<-function(){trans_new(name="log10p",
                                    transform=function(x){return(log10(x+1))},inverse=function(xt){return((10^xt) - 1)})}
@@ -94,80 +90,51 @@ log10p_trans<-function(){trans_new(name="log10p",
 ```
 
 
-```{r}
 
+We need to filter out ASVs that are not stably present in the reactor.This is how we are going to do so:
 
-out<-plot_taxa_abundances_over_time(physeq = norm_ps_polyFermS_rare, taxa_level = "Species", 
-                                                  taxa_to_plot= c("ASV086"),
-                                                  time_column = 'Day_from_Inoculum',
-                                                  other_columns_to_plot=NULL ,
-                                                  axis_transform=FALSE,
-                                                  transformation = 'log1p',
-                                                  plot_total = FALSE,
-                                                  data_facet1='Reactor_Treatment',
-                                                  data_facet2=NULL,
-                                                  n_facet_row=4,
-                                                  n_facet_col=4)
-
-plot<-ggplot(data=out$plot.df,mapping=aes(color=Data))+
-        geom_point(mapping=aes(x=Day_from_Inoculum,y=Abundances),alpha=0.8)+
-        geom_smooth(mapping=aes(x=Day_from_Inoculum,y=Abundances),method='lm')+
-        facet_wrap(~Reactor_Treatment)
-scale_y_continuous(trans=log10p_trans())
-plot  +scale_y_continuous(trans=log10p_trans())+ geom_vline(xintercept = c(39,54),color="black",alpha=0.4) + theme_light()
-```
+Say there are 30 samples in TR5. If at least 10 samples have a non-zero value for ASVxxx the particular ASV is considered. Otherwise that ASV is discarded and will not be considered in the analysis to identify trends for TR5. 
 
 ```{r}
+#function that checks whether a particular ASV should be kept
 
-keep_ASV<- function(taxa_name,sub,fraction){
+#taxa_name <- name of ASV to check
+#sub <- phyloseq object
+#fraction <- min threshold (default 0.33) this is the fraction of samples that need to have a non-zero value for that ASV in order to keep it. 
+keep_ASV<- function(taxa_name,sub,fraction=0.33){
   return(sum(otu_table(sub)[taxa_name]>0) >= floor(nsamples(sub)*fraction))
    }
 
-#Say there are 30 samples in TR5. If at least 10 samples have a non-zero value for ASVxxx I will consider the ASV. otherwise i discard the ASV for that particular reactor.
+
 remove_ASVs_from_reactor <- function(physeq, fraction, col_name, value_to_subset){
   #take only the samples we want to look at .
   is_value_to_subset = sample_data(physeq)[[col_name]] == value_to_subset
   subset_physeq<- prune_samples(is_value_to_subset,physeq)
   #remove taxa that are not present in all samples
   subset_physeq <- prune_taxa(taxa_sums(subset_physeq)>0,subset_physeq) 
+  
+  #apply function `keep_ASV` to all the taxa in the phyloseq object. We will get a logical vector indicating whether or not we should consider the ASV in our analysis. 
   keep<-sapply(taxa_names(subset_physeq),keep_ASV,subset_physeq,fraction)
+  
+  #remove the ASVS that need to be discarded from the phyloseq object
   return(prune_taxa(keep,subset_physeq))
 }
 ```
 
+An example of how `remove_ASVs_from_reactor` works 
 ```{r}
 sub<-remove_ASVs_from_reactor(norm_ps_polyFermS_rare,0.33,'Reactor_Treatment','TR1_CTX+HV292.1')
 
 ```
+
+Function to get the trend (Increasing, decreasing or constant) of a particular ASV
 ```{r}
-
-out<-plot_taxa_abundances_over_time(physeq = sub, taxa_level = "Species", 
-                                                  taxa_to_plot= taxa_names(sub)[3],
-                                                  time_column = 'Day_from_Inoculum',
-                                                  other_columns_to_plot=NULL ,
-                                                  axis_transform=FALSE,
-                                                  transformation = 'log1p',
-                                                  plot_total = FALSE,
-                                                  data_facet1='Reactor_Treatment',
-                                                  data_facet2=NULL,
-                                                  n_facet_row=4,
-                                                  n_facet_col=4)
-out$plot
-
-
-plot<-ggplot(data=out$plot.df,mapping=aes(color=Data))+
-        geom_point(mapping=aes(x=Day_from_Inoculum,y=Abundances),alpha=0.8)+
-        geom_smooth(mapping=aes(x=Day_from_Inoculum,y=Abundances),method='lm')+
-        facet_wrap(~Reactor_Treatment)
-
-plot  +scale_y_continuous(trans=log10p_trans())+ geom_vline(xintercept = c(39,54),color="black",alpha=0.4) + theme_light()
-
-
-coef(lm(out$plot.df[['Abundances']]~out$plot.df[['Day_from_Inoculum']]))[2]
-```
-```{r}
-get_trend_ASV <- function(taxaname,physeq,time_col,facet_col ){
+get_trend_ASV <- function(taxaname, #name of ASV
+                          physeq, 
+                          time_col,
+                          facet_col ){
   
+
   out<-plot_taxa_abundances_over_time(physeq = physeq, taxa_level = "Species", 
                                                   taxa_to_plot= taxaname,
                                                   time_column = time_col,
@@ -183,26 +150,26 @@ get_trend_ASV <- function(taxaname,physeq,time_col,facet_col ){
 
 
 
-
-return(coef(lm(out$plot.df[['Abundances']]~out$plot.df[['Day_from_Inoculum']]))[2])
+#perform the linear regression and get the slope
+return(coef(lm(out$plot.df[['Abundances']]~out$plot.df[[time_col]]))[2])
   
 }
 
-trend<-sapply(taxa_names(sub),get_trend_ASV,sub,'Day_from_Inoculum','Reactor_Treatement')
-
-
-names(trend) <- tax_table(sub)[taxa_names(sub),'Strain']
-#increasing_ASVs
-names(which(trend >0))
 ```
-# For all reactors
-```{r}
 
+For all the ASVs present in each reactor (after we filtered out the unstable ASVs), identify the trend as increasing, decreasing or constant . 
+```{r}
+#get all the reactor names 
 reactors<-norm_ps_polyFermS_rare %>% get_variable('Reactor_Treatment') %>% as.vector() %>% unique()
+
+#list object to store the trends of ASVs for each reactor
 reactor_trends = vector("list", length(reactors))
+#all the ASVs present in each reactor 
 ASV_sets <- vector("list", length(reactors))
+
 names(reactor_trends) <- reactors
 names(ASV_sets) <- reactors
+
 for(reactor in reactors){
   
   sub<-remove_ASVs_from_reactor(norm_ps_polyFermS_rare,0.33,'Reactor_Treatment',reactor)
@@ -215,41 +182,41 @@ for(reactor in reactors){
   reactor_trends[[reactor]] = trend
 }
 
+
+```
+
+`reactor_trends` holds the information of the trend of all the non-zero, stable ASVs present in each reactor.
+
+You can access each reactor's information like this. 
+```{r}
 reactor_trends$CR_UNTREATED
 ```
 
+# Visualizing the venn diagram using an upset plot
 
-```{r}
-names(ASV_sets)
-ASV_sets[c(1,3,4,5)]
-```
-
-#how to generate an upset plot now. 
-
+## For Van treated reactors
 ```{r}
 
 (upset_van <-upset(fromList(ASV_sets[c(1,6,7,8)]), order.by = "freq",nsets = 4,nintersects=NA,keep.order=TRUE))
 ```
-```{r}
-ctx_df
-```
 
+## For CTX treated reactors
 ```{r}
 (upset_ctx<-upset(fromList(ASV_sets[c(1,3,4,5)]), order.by = "freq",nsets = 4,nintersects=NA,keep.order=TRUE))
 
-upset_ctx$New_data
+
 ```
 
 
 
-#assign taxa as rownames of upset df so we can start making the venn diagram . 
+Assign taxa as rownames of dataframe used by the upset plot so we can start making the venn diagram . 
 ```{r}
 
 asvs_ctx<-purrr::reduce(ASV_sets[c(1,3,4,5)],union)
 asvs_van<-purrr::reduce(ASV_sets[c(1,6,7,8)],union)
 rownames(upset_ctx$New_data) <- asvs_ctx
 rownames(upset_van$New_data) <- asvs_van
-upset_van$New_data
+
 ```
 
 ```{r}
@@ -257,38 +224,29 @@ ctx_df<-upset_ctx$New_data
 van_df <- upset_van$New_data
 ```
 
-Let us not manually do the venn diagram for the CTX reactors and create a function 
 
-1.  ASV present just in the CR. This is not expected.  
-```{r}
-asvs_tmp_1<-ctx_df %>% filter(CR_UNTREATED == 1 & `TR1_CTX+HV292.1` == 0 & TR2_CTX == 0 & TR3_HV292.1 == 0) %>% rownames()
-
-what_trend <- function(asv,reactor_name,reactor_trends){
-  if(asv %in% reactor_trends[[reactor_name]][['Increasing']]){return('Increasing')}
-  if(asv %in% reactor_trends[[reactor_name]][['Decreasing']]){return('Decreasing')}
-  if(asv %in% reactor_trends[[reactor_name]][['Constant']]){return('Constant')}
-}
-
-trends_1<-sapply(asvs_tmp_1,what_trend,'CR_UNTREATED',reactor_trends)
-
-data.frame(Taxa = names(trends_1), Trend = trends_1,row.names = NULL)
-```
-#function to query set combinations and identify the trends of the asv in that set
+# Function to query set combinations and identify the trends of the asv in that set
 
 ```{r}
-identify_asv_trends_in_set <- function(set_combo,upset_df,vars,trends_object) {
-    
+identify_asv_trends_in_set <-function(set_combo, #what reactors should we consider
+                                      upset_df, #dataframe to use in upset format
+                                      vars, #variable names in upset_df
+                                      trends_object)  
+{
+  
+  #names of reactors we are considering  
   reactors <- vars[set_combo %>% as.logical()]
   #names of ASV present in set combination
   asvs_tmp<-upset_df %>% filter(.data[[vars[[1]]]] == set_combo[[1]],.data[[vars[[2]]]] == set_combo[[2]], .data[[vars[[3]]]] == set_combo[[3]], .data[[vars[[4]]]] == set_combo[[4]]) %>% rownames()
   
-  #function to identify the trend of a partiular ASV in a reactor
+  #function to identify the trend of a particular ASV in a reactor
   what_trend <- function(asv,reactor_name,reactor_trends){
   if(asv %in% reactor_trends[[reactor_name]][['Increasing']]){return('Increasing')}
   if(asv %in% reactor_trends[[reactor_name]][['Decreasing']]){return('Decreasing')}
   if(asv %in% reactor_trends[[reactor_name]][['Constant']]){return('Constant')}
   }
   
+  #obtain result as a dataframe
   result <- data.frame(row.names = asvs_tmp)
   for(reactor_name in reactors){
   trends<-sapply(asvs_tmp,what_trend,reactor_name,reactor_trends)
@@ -297,20 +255,32 @@ identify_asv_trends_in_set <- function(set_combo,upset_df,vars,trends_object) {
   }
   colnames(result) <- reactors
  return(result)
-  #return(asvs_tmp)
+  
 }
 ```
 
-# HERE!!!! for ctx 
- 
+#Identify trends of ASVs in CTX treated reactors
+
+This is the order to keep in mind
+```{r}
+
+colnames(ctx_df)
+```
+
 ```{r}
 (t_ctx<-identify_asv_trends_in_set(set_combo=c(1,1,1,1),upset_df = ctx_df,vars = colnames(ctx_df),trends_object = reactor_trends))
 
 
 ```
+#Identify trends of ASV in VAN treated reactors
+
+Order to keep in mind. 
+```{r}
+colnames(van_df)
+```
 
 ```{r}
-(t_van<-identify_asv_trends_in_set(set_combo=c(0,1,1,1),upset_df = van_df,vars = colnames(van_df),trends_object = reactor_trends))
+(t_van<-identify_asv_trends_in_set(set_combo=c(1,1,1,1),upset_df = van_df,vars = colnames(van_df),trends_object = reactor_trends))
 ```
 
 
@@ -321,29 +291,5 @@ identify_asv_trends_in_set <- function(set_combo,upset_df,vars,trends_object) {
 
 
 
-```{r}
-n = 4
-combinations<-expand.grid(replicate(n, 0:1, simplify = FALSE))
 
-
-
-
-
-
-
-
-
-
-combinations<-combinations %>% as.matrix()
-
-combinations<-as.list(data.frame(t(combinations)))
-
-res<-lapply(combinations,identify_asv_trends_in_set,upset_df = ctx_df,vars = colnames(ctx_df),trends_object = reactor_trends)
-
-```
-
-1. 
-```{r}
-
-```
 

@@ -1,0 +1,32 @@
+---
+title: "Compare trend of genus specfic ASVs with unique sequence qPCR data"
+author: "Sneha Sundar"
+date: "29/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load required packages
+
+```{r message = FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+
+```
+
+## Source necessary functions
+```{r message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+## 

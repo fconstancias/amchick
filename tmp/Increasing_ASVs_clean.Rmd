@@ -67,7 +67,7 @@ Taking only the unenriched samples, getting rid of dubious samples and taking on
 ```{r}
 ps_rare %>%
   subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% # heatmap reavels they might be comming from VAN treated or enrichments
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% # heatmap reveals they might be coming from VAN treated or enrichments
   subset_samples(Day_from_Inoculum >= 30 & Day_from_Inoculum <= 54) -> ps_polyFermS_rare
 
 

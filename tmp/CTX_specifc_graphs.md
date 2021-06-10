@@ -1,7 +1,7 @@
 ---
 title: "CTX specific graphs"
 author: "Sneha Sundar"
-date: "March 30, 2021"
+date: "June 10, 2021"
 output: 
   html_document: 
     toc: yes
@@ -121,14 +121,14 @@ physeq@sam_data %>%
 
 
 
-#### Take only vancomycin treated reactors
+#### Take only ctx treated reactors
 
 
 ```r
 physeq %>% 
   subset_samples(Experiment == "Continuous") %>% 
   subset_samples(Paul %!in% c("Paul")) %>%
-  subset_samples(Reactor %!in% c("IR2","TR4","TR5","TR6")) -> ps_PolyFermS_van
+  subset_samples(Reactor %!in% c("IR2","TR4","TR5","TR6")) -> ps_PolyFermS_ctx
 ```
 
 
@@ -136,9 +136,9 @@ physeq %>%
 
 
 ```r
-ps_PolyFermS_van %>% 
+ps_PolyFermS_ctx %>% 
   rarefy_even_depth(sample.size = 4576,
-                    rngseed = 123) -> ps_polyFermS_van_rare
+                    rngseed = 123) -> ps_PolyFermS_ctx_rare
 ```
 
 ```
@@ -158,7 +158,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## 13 samples removedbecause they contained fewer reads than `sample.size`.
+## 12 samples removedbecause they contained fewer reads than `sample.size`.
 ```
 
 ```
@@ -166,7 +166,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## CR-40-S166ETR1-30-S178ETR1-42-S194ETR2-30-S195IR1-40-S197
+## CR-40-S166CR-52-S196ETR1-30-S178ETR1-42-S194ETR2-30-S195
 ```
 
 ```
@@ -174,7 +174,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## 52OTUs were removed because they are no longer 
+## 85OTUs were removed because they are no longer 
 ## present in any sample after random subsampling
 ```
 
@@ -183,9 +183,9 @@ ps_PolyFermS_van %>%
 ```
 
 ```r
-ps_polyFermS_van_rare %>%
+ps_PolyFermS_ctx_rare %>%
   subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_polyFermS_van_rare_clean
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_ctx_rare_clean
 ```
 
 ### Alpha diversity graphs
@@ -194,7 +194,7 @@ ps_polyFermS_van_rare %>%
 
 
 ```r
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_alphas(phylo = TRUE) -> alpha_df
 ```
 
@@ -267,13 +267,17 @@ out.alpha.2$plot +
 #### PCA plot
 
 ```r
-ps_polyFermS_van_rare_clean  %>%
+ps_PolyFermS_ctx_rare_clean  %>%
   phyloseq_plot_bdiv(bdiv_list,
                      m = "CoDa",
                      seed = 123) -> coda
 ```
 
 ```
+## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
+
+## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
+
 ## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
 
 ## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
@@ -308,11 +312,11 @@ We are not rarefying here. We did remove the dubious samples though.
 
 
 ```r
-ps_PolyFermS_van %>%
+ps_PolyFermS_ctx %>%
 subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_van_clean
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_ctx_clean
 
-ps_PolyFermS_van_clean %>%
+ps_PolyFermS_ctx_clean %>%
   sample_data() %>%
   data.frame() -> df
 
@@ -357,8 +361,8 @@ df %>%
   dist(method= "euc") -> euc_met
 
 
-plot_ordination(ps_PolyFermS_van_clean,
-                ordination = phyloseq::ordinate(ps_PolyFermS_van_clean,
+plot_ordination(ps_PolyFermS_ctx_clean,
+                ordination = phyloseq::ordinate(ps_PolyFermS_ctx_clean,
                                       distance = euc_met, 
                                       method = "PCoA")) -> pca
 
@@ -396,7 +400,7 @@ Class level correlation
 
 
 ```r
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_correlate_taxa(log10 = TRUE, 
                           tax_glom = "Family",
                           grouping_column = "Reactor_Treatment", # grouping with fake group column will not subset any data.
@@ -415,7 +419,7 @@ Strain level correlation
 
 
 ```r
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_correlate_taxa(log10 = TRUE, 
                           tax_glom = "Strain",
                           grouping_column = "Reactor_Treatment", # grouping with fake group column will not subset any data.
@@ -439,7 +443,7 @@ results.strain$plot +
 
 
 ```r
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_ampvis_heatmap(transform = "compositional",
                           group_by = "Day_from_Inoculum",
                           facet_by = c("Enrichment", "Phase", "Reactor", "Treatment", "Experiment", "Reactor_Treatment" ),

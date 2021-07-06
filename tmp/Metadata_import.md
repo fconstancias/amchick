@@ -1,19 +1,18 @@
 ---
 title: "metadata_import"
 author: "Sneha & FC"
-date: "`r format(Sys.time(), '%B %d, %Y')`"
+date: "June 08, 2021"
 output: 
   html_document: 
     toc: yes
     keep_md: yes
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 
-```{r packages, results=FALSE,warning=FALSE, message=FALSE}
+
+
+```r
 library(tidyverse)
 library(phyloseq)
 library(readxl)
@@ -22,8 +21,8 @@ library(here)
 
 
 First import the phyloseq object.
-```{r} 
 
+```r
 #get the file path of 'phyloseq.RDS' 
 ps <- "data/raw/metabarcoding/physeq.RDS"
 
@@ -31,14 +30,12 @@ ps <- "data/raw/metabarcoding/physeq.RDS"
 ps %>% 
   here::here() %>% 
   readRDS() -> physeq
-  
-
-
 ```
 
 
 Import the excel file containing the metadata.
-```{r}
+
+```r
 #get file path of the metadata file (it is an excel file)
 md <- "data/raw/metabarcoding/p654_Alessia_Pennacchia_sample_sheet_file_11.01.2021.xlsx"
 #load the metadata file, set na = 'NA' so that it does not read the NAs in the excel sheet as characters
@@ -51,7 +48,8 @@ md %>%
 We need to add the new columns in `metadata` to the existing columns in `sample_data(physeq)`. 
 
 First alphabetically arrange `metadata` by `Sample_name` to make sure we merge the dataframes correctly
-```{r }
+
+```r
 metadata %>% arrange(Sample_name) -> metadata
 
 #metadata
@@ -59,7 +57,8 @@ metadata %>% arrange(Sample_name) -> metadata
 
 
 Get the `sample_data(physeq)` as a dataframe for merging
-```{r}
+
+```r
 physeq %>%  
   sample_data() %>% 
   as.matrix() %>%  
@@ -72,14 +71,20 @@ physeq %>%
 
 Check if the sample names match before merging
 
-```{r}
+
+```r
 all.equal(metadata$Sample_name,sample.data$Sample_name)
+```
+
+```
+## [1] TRUE
 ```
 
 
 
 Merge the two dataframes (we add columns 2 to 25 of `sample.data` to `metadata`)
-```{r}
+
+```r
 metadata %>% 
   mutate(sample.data[,2:25],) -> metadata
 
@@ -87,24 +92,28 @@ metadata %>%
 dim(metadata)
 ```
 
+```
+## [1] 384  51
+```
+
 
 `sample_data` had `Sample_name` as rownames . In order to match the format, we make sure that `metadata` also has rownames.
-```{r}
+
+```r
 metadata %>% 
           column_to_rownames(var="Sample_name") -> metadata
-
 ```
 
 Overwriting  `sample_data(physeq)` of the phyloseq object with `metadata`
-```{r}
-sample_data(physeq) <- metadata
 
+```r
+sample_data(physeq) <- metadata
 ```
 
 
 Add metabolite data to sample data of phyloseq object
-```{r}
 
+```r
 here("data/raw/hplc Fermentation (Salvato automaticamente).xlsx") %>%
       readxl::read_xlsx(sheet = "All total") -> metabolites
 
@@ -122,8 +131,8 @@ physeq@sam_data %>%
 
 Creating factor variables out of all the metadata columns so that the levels are in the order we specify. 
 
-```{r}
 
+```r
 sample_data(physeq)$Experiment <- fct_relevel(sample_data(physeq)$Experiment, "NTC","Mock", "HV292.1", "CCUG59168", "Cecum","Continuous","Batch") 
 
 
@@ -152,21 +161,25 @@ sample_data(physeq)$plate <- fct_relevel(sample_data(physeq)$plate, "P1","P2","P
 
 Check if all is well 
 
-```{r}
+
+```r
  as(sample_data(physeq),"matrix") %>%
          data.frame(check.names=FALSE) %>%
          rownames_to_column("Sample_ID") %>% dim()
+```
 
+```
+## [1] 384  64
 ```
 
 Saving the new updated physeq object
-```{r}
+
+```r
 #store the path where you want the new physeq object
 out.path <- "data/processed"
 physeq_update <- physeq
 
 saveRDS(physeq_update,file = file.path(here::here(out.path),"physeq_update_16S_chicken_08-06-21.RDS"))
-
 ```
 
 

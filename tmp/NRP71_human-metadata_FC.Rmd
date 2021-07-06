@@ -24,23 +24,11 @@ options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issue
 #this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
 ```
 
-#### Source required functions
-
-```{r message=FALSE}
-'%!in%' <- function(x,y)!('%in%'(x,y))
-
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
-```
-
 
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_human.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly.RDS"
 
 ps %>% 
   here::here() %>%
@@ -51,148 +39,26 @@ physeq$physeq -> physeq
 physeq
 ```
 
-```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_human.RDS"
 
-ps %>% 
-  here::here() %>%
-  readRDS() %>%
-  phyloseq_get_strains_fast() %>% 
-  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 30)  -> physeq
 
-```
 
-# Rarefaction:
+```{r, eval=FALSE}
+source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
 
-## Curves
-```{r, results= 'hide'}
-require(parallel)
+# ps@sam_data = NULL
 
 physeq %>%
-  ggrare(step = 100, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_Treatment" , plot = FALSE) -> rare_curves
+  physeq_add_metadata(physeq = .,
+                      metadata = here::here("data/raw/metabarcoding/humann_track_analysis.xlsx") %>%
+  readxl::read_xlsx(), sample_column = "sample") -> physeq_meta
+
+physeq_meta
 ```
 
 ```{r}
-rare_curves +
-  theme_classic() + 
-  geom_vline(xintercept = sample_sums(physeq) %>% min(),
-             color="red", 
-             linetype="dashed", size=0.25) + 
-  facet_wrap(~ Reactor_Treatment) + ylab("ASV Richness") -> rare_plot
-
-rare_plot
-
-rare_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
-```
-
-## Rarefaction:
-
-```{r}
-physeq %>% 
-  rarefy_even_depth(sample.size = 4576,
-                    rngseed = 123) -> physeq_rare
-
-physeq_rare
-```
-
-```{r, results= 'hide'}
-require(parallel)
-
-physeq_rare %>%
-  ggrare(step = 50, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_Treatment" , plot = FALSE) -> rare_rare_curves
-```
-
-```{r}
-rare_rare_curves +
-  theme_classic() + 
-  geom_vline(xintercept = sample_sums(physeq_rare) %>% min(),
-             color="red", 
-             linetype="dashed", size=0.25) + 
-  facet_wrap(~ Reactor_Treatment) + ylab("ASV Richness") -> rare_rare_plot
-
-rare_rare_plot
-
-rare_rare_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
-```
-
-# alpha_div:
-
-#### Alpha diversity measures over time
-
-```{r message = FALSE, warning = FALSE , results='hide'}
-physeq_rare %>%
-  phyloseq_alphas(phylo = FALSE) -> alpha_df
-```
-
-```{r message=FALSE}
-measures_alpha = c("Observed", "diversity_shannon", "evenness_pielou")#, "PD","MNTD", "SES.MPD" ,"bNTI")
-
-alpha_df %>%
-  plot_alphas(measure = measures_alpha,
-              x_group = "Reactor_Treatment",
-              colour_group = "Enrichment",
-              fill_group = "Enrichment",
-              shape_group = "Enrichment",
-              facet_group = "Reactor_Treatment",
-              test_group = "Reactor_Treatment",
-              test_group_2 = "Enrichment") -> alpha_out 
-```
-
-
-```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
-
-alpha_out$plot$data %>%
-  dplyr::filter(Enrichment == "NotEnriched") %>%
-  plot_time(measure = measures_alpha,
-            x = "Day_of_Treatment",
-            facet = c("alphadiversiy ~ ."),
-            shape = NULL) + 
-  labs(x="Day (from Treatment)", y= "alpha-diversity",  
-       col=NULL, fill = NULL, shape = NULL) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
-
-alpha_div_plot
-
-alpha_div_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
-```
-
-
-```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
-
-alpha_div_plot  + geom_boxplot(aes(group = Reactor_Treatment,
-                      color =Reactor_Treatment,
-                      fill = Reactor_Treatment),
-                      outlier.shape = NA,
-                      outlier.colour = NA,
-                      # outlier.shape = NA,
-                  alpha = 0.2) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
-
-alpha_div_plot 
-
-alpha_div_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
-```
-
-```{r}
-alpha_out$stat %>% 
-  filter(signif == "SIGN") %>% 
-  arrange(alphadiversiy) %>% 
-  DT::datatable()
+physeq_meta %>% 
+  add_phylogeny_to_phyloseq() %>% 
+  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_meta.RDS"))
 ```
 
 ```{r}

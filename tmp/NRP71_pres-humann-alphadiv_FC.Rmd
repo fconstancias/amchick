@@ -80,38 +80,15 @@ plot_time <- function(df,
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_human.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 30)  -> physeq
-
-```
-
-```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_human.RDS"
-
-ps %>% 
-  here::here() %>%
-  readRDS() %>%
-  phyloseq_get_strains_fast() %>% 
-  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 30)  -> physeq
+  # subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Enriched == "not_enriched")  -> physeq
 
 ```
 
@@ -123,7 +100,7 @@ require(parallel)
 
 physeq %>%
   ggrare(step = 100, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_Treatment" , plot = FALSE) -> rare_curves
+         color = "Day_of_treatment" , plot = FALSE) -> rare_curves
 ```
 
 ```{r}
@@ -136,9 +113,15 @@ rare_curves +
 
 rare_plot
 
-rare_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
+# rare_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                   file = file.path(here::here("data/processed/figures_NRP72")))
+```
+chicken rarefaction was 4576, let see how it looks here.
+
+```{r}
+rare_curves +
+  theme_classic() + facet_null() + coord_cartesian(xlim = c(0,5000))
 ```
 
 ## Rarefaction:
@@ -156,7 +139,7 @@ require(parallel)
 
 physeq_rare %>%
   ggrare(step = 50, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_Treatment" , plot = FALSE) -> rare_rare_curves
+         color = "Day_of_treatment" , plot = FALSE) -> rare_rare_curves
 ```
 
 ```{r}
@@ -169,9 +152,9 @@ rare_rare_curves +
 
 rare_rare_plot
 
-rare_rare_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
+# rare_rare_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                   file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
 # alpha_div:
@@ -189,49 +172,51 @@ measures_alpha = c("Observed", "diversity_shannon", "evenness_pielou")#, "PD","M
 alpha_df %>%
   plot_alphas(measure = measures_alpha,
               x_group = "Reactor_Treatment",
-              colour_group = "Enrichment",
-              fill_group = "Enrichment",
-              shape_group = "Enrichment",
+              colour_group = "Enriched",
+              fill_group = "Enriched",
+              shape_group = "Enriched",
               facet_group = "Reactor_Treatment",
               test_group = "Reactor_Treatment",
-              test_group_2 = "Enrichment") -> alpha_out 
+              test_group_2 = "Enriched") -> alpha_out 
 ```
 
 
 ```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
 
 alpha_out$plot$data %>%
-  dplyr::filter(Enrichment == "NotEnriched") %>%
+  dplyr::filter(Enriched == "not_enriched") %>%
   plot_time(measure = measures_alpha,
-            x = "Day_of_Treatment",
+            x = "Day_of_inoculum",
             facet = c("alphadiversiy ~ ."),
+            fill = "Day_of_treatment",
+            group = "Day_of_treatment",
             shape = NULL) + 
   labs(x="Day (from Treatment)", y= "alpha-diversity",  
        col=NULL, fill = NULL, shape = NULL) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
 
 alpha_div_plot
 
-alpha_div_plot %>% 
-  export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
+# alpha_div_plot %>% 
+# export::graph2ppt(append = TRUE,
+#                 file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
 
 ```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
 
 alpha_div_plot  + geom_boxplot(aes(group = Reactor_Treatment,
-                      color =Reactor_Treatment,
-                      fill = Reactor_Treatment),
-                      outlier.shape = NA,
-                      outlier.colour = NA,
-                      # outlier.shape = NA,
-                  alpha = 0.2) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
+                                   color =Reactor_Treatment,
+                                   fill = Reactor_Treatment),
+                               outlier.shape = NA,
+                               outlier.colour = NA,
+                               # outlier.shape = NA,
+                               alpha = 0.2) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
 
 alpha_div_plot 
 
 alpha_div_plot %>% 
   export::graph2ppt(append = TRUE,
-                  file = file.path(here::here("data/processed/figures_NRP72")))
+                    file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
 ```{r}

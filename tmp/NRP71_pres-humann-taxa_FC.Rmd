@@ -80,20 +80,15 @@ plot_time <- function(df,
 # Import phyloseq object
 
 ```{r}
-ps = "data/processed/physeq_update_16S_chicken_08-06-21.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 30)  -> physeq
+  # subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Enriched == "not_enriched")  -> physeq
 
 ```
 

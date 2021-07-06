@@ -10,6 +10,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -49,18 +50,35 @@ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/de
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/humann_track_analysis.xlsx") %>%
-  readxl::read_xlsx(), sample_column = "sample") -> physeq_meta
+                      metadata = here::here("data/raw/metabarcoding/Human_mapfile.xlsx") %>%
+                        readxl::read_xlsx(), sample_column = "sample") -> physeq_meta
 
-physeq_meta
-```
+physeq;physeq_meta
 
-```{r}
 physeq_meta %>% 
-  add_phylogeny_to_phyloseq() %>% 
   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_meta.RDS"))
 ```
 
 ```{r}
+physeq_meta %>% 
+  add_phylogeny_to_phyloseq(export = FALSE) %>% 
+  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
+```
+
+```{r}
+
+"data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS" %>% 
+  here::here() %>% 
+  readRDS() %>% 
+  physeq_add_metadata(physeq = .,
+                      metadata = here::here("data/raw/metabarcoding/Human_mapfile.xlsx") %>%
+                        readxl::read_xlsx(), sample_column = "sample_name") %>% 
+    saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
+
+  
+  
+```
+```{r}
 sessionInfo()
 ```
+

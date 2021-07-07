@@ -80,16 +80,20 @@ plot_time <- function(df,
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  # subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enriched == "not_enriched")  -> physeq
+  subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(Model == "Human")  -> physeq
 
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
 ```
 
 # Rarefaction:

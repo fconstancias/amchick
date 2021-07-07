@@ -1,5 +1,5 @@
 ---
-title: "NRP72 -metadata - humann"
+title: "NRP72 -metadata - humann - chiken "
 author: "Florentin Constancias"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -29,7 +29,7 @@ options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issue
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_human-chicken.RDS"
 
 ps %>% 
   here::here() %>%
@@ -50,34 +50,21 @@ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/de
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/Human_mapfile.xlsx") %>%
-                        readxl::read_xlsx(), sample_column = "sample") -> physeq_meta
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
+                        readr::read_tsv(), sample_column = "sample") -> physeq_meta
 
 physeq;physeq_meta
 
 physeq_meta %>% 
-  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_meta.RDS"))
+  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"))
 ```
 
 ```{r}
-physeq_meta %>% 
-  add_phylogeny_to_phyloseq(export = FALSE) %>% 
-  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
+# physeq_meta %>% 
+#   add_phylogeny_to_phyloseq(export = FALSE) %>% 
+#   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
 ```
 
-```{r}
-
-"data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS" %>% 
-  here::here() %>% 
-  readRDS() %>% 
-  physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/Human_mapfile.xlsx") %>%
-                        readxl::read_xlsx(), sample_column = "sample_name") %>% 
-    saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
-
-  
-  
-```
 ```{r}
 sessionInfo()
 ```

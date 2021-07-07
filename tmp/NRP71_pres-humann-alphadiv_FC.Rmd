@@ -69,9 +69,7 @@ plot_time <- function(df,
     # scale_y_continuous(labels = scientific,
     #                    limits=c(1e+10, 1e+11), breaks = seq(1e+10, 1e+11, by = 1e+10),
     #                    trans = "log10") +
-    theme_light() +
-    scale_color_viridis_d(na.value = "black") +
-    scale_fill_viridis_d(na.value = "black") -> plot
+    theme_light() -> plot
   
   return(plot + theme(legend.position = "bottom"))
 }
@@ -80,17 +78,22 @@ plot_time <- function(df,
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  # subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enriched == "not_enriched")  -> physeq
+  subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(Model == "Human")  -> physeq
 
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
 ```
+
 
 # Rarefaction:
 
@@ -100,7 +103,7 @@ require(parallel)
 
 physeq %>%
   ggrare(step = 100, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_treatment" , plot = FALSE) -> rare_curves
+         color = "Day_of_Treatment" , plot = FALSE) -> rare_curves
 ```
 
 ```{r}
@@ -139,7 +142,7 @@ require(parallel)
 
 physeq_rare %>%
   ggrare(step = 50, parallel = TRUE,  se = FALSE, 
-         color = "Day_of_treatment" , plot = FALSE) -> rare_rare_curves
+         color = "Day_of_Treatment" , plot = FALSE) -> rare_rare_curves
 ```
 
 ```{r}
@@ -172,27 +175,30 @@ measures_alpha = c("Observed", "diversity_shannon", "evenness_pielou")#, "PD","M
 alpha_df %>%
   plot_alphas(measure = measures_alpha,
               x_group = "Reactor_Treatment",
-              colour_group = "Enriched",
-              fill_group = "Enriched",
-              shape_group = "Enriched",
+              colour_group = "Enrichment",
+              fill_group = "Enrichment",
+              shape_group = "Enrichment",
               facet_group = "Reactor_Treatment",
               test_group = "Reactor_Treatment",
-              test_group_2 = "Enriched") -> alpha_out 
+              test_group_2 = "Enrichment") -> alpha_out 
 ```
 
 
 ```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
 
 alpha_out$plot$data %>%
-  dplyr::filter(Enriched == "not_enriched") %>%
+  filter(Treatment %!in% c("DONOR", "positive", "negative", "STRAIN")) %>% 
   plot_time(measure = measures_alpha,
-            x = "Day_of_inoculum",
-            facet = c("alphadiversiy ~ ."),
-            fill = "Day_of_treatment",
-            group = "Day_of_treatment",
+            x = "Day_of_Treatment",
+            facet = c("alphadiversiy ~ Fermentation"),
+            fill = "Treatment",
+            group = "Treatment_Reactor",
             shape = NULL) + 
   labs(x="Day (from Treatment)", y= "alpha-diversity",  
-       col=NULL, fill = NULL, shape = NULL) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
+       col=NULL, fill = NULL, shape = NULL) + 
+  guides(col = guide_legend(ncol = 3))  +
+    scale_color_viridis_d(na.value = "black") +
+    scale_fill_viridis_d(na.value = "black")  -> alpha_div_plot
 
 alpha_div_plot
 

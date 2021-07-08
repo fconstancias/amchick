@@ -45,22 +45,21 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 # Import phyloseq object
 
 ```{r}
-ps = "data/processed/physeq_update_16S_chicken_08-06-21.RDS"
-
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 27)  -> physeq
+  subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(Model == "Human")  %>% 
+    subset_samples(Treatment %!in% c("positive", "negative", "DONOR", "CCUG59168", "HV292.1", "STRAIN")) -> physeq
 
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
 ```
 
 # Rarefaction:
@@ -93,13 +92,13 @@ bdiv_list$coda <- coda$physeq_clr %>% phyloseq::distance(method = "euclidean")
 coda$PCA$layers[[1]] = NULL
 
 coda$PCA + geom_point(size=2,
-                      aes(color = Reactor_Treatment, 
-                          fill = Reactor_Treatment,
+                      aes(color =Treatment, 
+                          fill = Treatment,
                           shape = NULL,
                           alpha = Day_of_Treatment)) + 
   theme_light() +
   geom_path(arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")),
-            size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment), show.legend = FALSE) +
+            size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Treatment), show.legend = FALSE) +
   scale_alpha_continuous(range=c( 0.9, 0.3)) + scale_color_viridis_d(na.value = "black") + 
   scale_fill_viridis_d(na.value = "black") + 
   # scale_shape_manual(values = c(8, 21, 22, 23, 24, 16, 15, 18, 17)) + 
@@ -108,30 +107,13 @@ coda$PCA + geom_point(size=2,
 
 pca_atchi
 
-pca_atchi %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+
+plotly::ggplotly(pca_atchi)
+# pca_atchi %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
-
-```{r, message = FALSE, warnings = FALSE}
-phyloseq_add_taxa_vector(dist =  bdiv_list$coda,
-                         phyloseq = physeq_rare,
-                         figure_ord = pca_atchi,
-                         top_r = 16,
-                         taxrank_glom = "Strain",
-                         tax_rank_plot = "Strain",
-) -> out
-
-out$plot  %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
-```
-
-```{r, message = FALSE, warnings = FALSE}
-out$signenvfit %>%  
-  DT::datatable()
-```
 
 ```{r, message = FALSE, warnings = FALSE}
 phyloseq_add_taxa_vector(dist =  bdiv_list$coda,
@@ -142,14 +124,12 @@ phyloseq_add_taxa_vector(dist =  bdiv_list$coda,
                          tax_rank_plot = "Genus"
 ) -> out
 
-out$plot  %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+out$plot
 ```
 
 ```{r, message = FALSE, warnings = FALSE}
-out$signenvfit %>%  
-  DT::datatable()
+# out$signenvfit %>%  
+#   DT::datatable()
 ```
 ```{r, message = FALSE, warnings = FALSE}
 vegan::adonis(bdiv_list$coda  ~ get_variable(physeq_rare, "Reactor_Treatment") * 

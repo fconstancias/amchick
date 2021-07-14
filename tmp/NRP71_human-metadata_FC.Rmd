@@ -53,6 +53,16 @@ physeq %>%
                       metadata = here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
                         readr::read_tsv(), sample_column = "sample") -> physeq_meta
 
+
+here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
+                        readr::read_tsv() %>% 
+  
+ifelse(!is.na(sample_data(physeq_meta)$Antibiotic_mg.mL), 
+       sample_data(physeq_meta)$Antibiotic_mg.mL, "")
+mutate(gradebook, Pass.Fail = ifelse(grade > 60, "Pass", "Fail"))
+
+
+
 physeq;physeq_meta
 
 physeq_meta %>% 

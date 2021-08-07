@@ -1,7 +1,7 @@
 ---
 title: "NRP72 -metadata - humann - chiken "
 author: "Florentin Constancias"
-date: "July 08, 2021"
+date: "August 04, 2021"
 output: 
   html_document: 
     toc: yes
@@ -48,6 +48,119 @@ physeq
 ```
 
 
+```r
+physeq %>% 
+  sample_names() %>% 
+  sort() %>% 
+  head()
+```
+
+```
+## [1] "AB24-1-S55"  "AB24-1E-S38" "AB24-2-S48"  "AB24-2E-S23" "AB24-3-S71" 
+## [6] "AB24-3E-S25"
+```
+
+
+
+```r
+here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv() %>% 
+  pull("sample") %>% 
+  sort() %>% 
+  head()
+```
+
+```
+## 
+## ── Column specification ────────────────────────────────────────────────────────
+## cols(
+##   .default = col_double(),
+##   sample = col_character(),
+##   Sample_description = col_character(),
+##   I7_Index_ID = col_character(),
+##   index = col_character(),
+##   I5_Index_ID = col_character(),
+##   index2 = col_character(),
+##   Description2 = col_character(),
+##   Experiment = col_character(),
+##   Reactor = col_character(),
+##   Treatment = col_character(),
+##   Enrichment = col_character(),
+##   Phase = col_character(),
+##   Treatment2 = col_character(),
+##   Date = col_character(),
+##   Paul = col_character(),
+##   Reactor_Treatment = col_character(),
+##   Model = col_character(),
+##   Antibiotic = col_character()
+## )
+## ℹ Use `spec()` for the full column specifications.
+```
+
+```
+## [1] "AB24-1-S55"  "AB24-1E-S38" "AB24-2-S48"  "AB24-2E-S23" "AB24-3-S71" 
+## [6] "AB24-3E-S25"
+```
+
+
+```r
+source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+
+# ps@sam_data = NULL
+
+physeq %>%
+  physeq_add_metadata(physeq = .,
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv(), sample_column = "sample") -> physeq_meta
+```
+
+```
+## 
+## ── Column specification ────────────────────────────────────────────────────────
+## cols(
+##   .default = col_double(),
+##   sample = col_character(),
+##   Sample_description = col_character(),
+##   I7_Index_ID = col_character(),
+##   index = col_character(),
+##   I5_Index_ID = col_character(),
+##   index2 = col_character(),
+##   Description2 = col_character(),
+##   Experiment = col_character(),
+##   Reactor = col_character(),
+##   Treatment = col_character(),
+##   Enrichment = col_character(),
+##   Phase = col_character(),
+##   Treatment2 = col_character(),
+##   Date = col_character(),
+##   Paul = col_character(),
+##   Reactor_Treatment = col_character(),
+##   Model = col_character(),
+##   Antibiotic = col_character()
+## )
+## ℹ Use `spec()` for the full column specifications.
+```
+
+```r
+physeq;physeq_meta
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
+## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
+## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
+## refseq()      DNAStringSet:      [ 1155 reference sequences ]
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
+## sample_data() Sample Data:       [ 600 samples by 59 sample variables ]
+## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
+## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
+## refseq()      DNAStringSet:      [ 1155 reference sequences ]
+```
 
 
 
@@ -58,14 +171,113 @@ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/de
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
-                        readr::read_tsv(), sample_column = "sample") -> physeq_meta
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv() %>% 
+    mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment),
+    Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+  , sample_column = "sample") -> physeq_meta
+```
+
+```
+## 
+## ── Column specification ────────────────────────────────────────────────────────
+## cols(
+##   .default = col_double(),
+##   sample = col_character(),
+##   Sample_description = col_character(),
+##   I7_Index_ID = col_character(),
+##   index = col_character(),
+##   I5_Index_ID = col_character(),
+##   index2 = col_character(),
+##   Description2 = col_character(),
+##   Experiment = col_character(),
+##   Reactor = col_character(),
+##   Treatment = col_character(),
+##   Enrichment = col_character(),
+##   Phase = col_character(),
+##   Treatment2 = col_character(),
+##   Date = col_character(),
+##   Paul = col_character(),
+##   Reactor_Treatment = col_character(),
+##   Model = col_character(),
+##   Antibiotic = col_character()
+## )
+## ℹ Use `spec()` for the full column specifications.
+```
+
+```r
+# 
+# meta %>% 
+#     mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment)
+#     Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+
+# ifelse(!is.na(sample_data(physeq_meta)$Antibiotic_mg.mL), 
+#        sample_data(physeq_meta)$Antibiotic_mg.mL, "") %>% 
+# mutate(gradebook, Pass.Fail = ifelse(grade > 60, "Pass", "Fail"))
+
+
 
 physeq;physeq_meta
+```
 
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
+## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
+## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
+## refseq()      DNAStringSet:      [ 1155 reference sequences ]
+```
+
+```
+## phyloseq-class experiment-level object
+## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
+## sample_data() Sample Data:       [ 600 samples by 61 sample variables ]
+## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
+## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
+## refseq()      DNAStringSet:      [ 1155 reference sequences ]
+```
+
+```r
 physeq_meta %>% 
   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"))
 ```
+
+600 samples initially and 471 with metadata ????
+
+
+```r
+intersect(
+  sample_names(physeq_meta),
+  sample_names(physeq)) %>% 
+  length()
+```
+
+```
+## [1] 600
+```
+
+
+```r
+difference <- function(x, y) {
+c(setdiff(x, y), setdiff(y, x))
+}
+
+difference(
+  sample_names(physeq),
+  sample_names(physeq_meta))
+```
+
+```
+## character(0)
+```
+
+Above missing from the metadata but present in the initiall phyloseq object.
+
+
 
 
 ```r

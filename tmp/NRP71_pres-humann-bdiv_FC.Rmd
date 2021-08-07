@@ -53,8 +53,8 @@ ps %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
   subset_samples(Enrichment == "NotEnriched") %>% 
-  subset_samples(Model == "Human")  %>% 
-    subset_samples(Treatment %!in% c("positive", "negative", "DONOR", "CCUG59168", "HV292.1", "STRAIN")) -> physeq
+  subset_samples(Model == "Human")  %>%
+  subset_samples(Treatment %!in% c("positive", "negative", "DONOR", "CCUG59168", "HV292.1", "STRAIN")) -> physeq
 
 physeq %>% 
   sample_data() %>% 

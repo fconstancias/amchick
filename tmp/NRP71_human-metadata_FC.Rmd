@@ -38,28 +38,71 @@ ps %>%
 physeq$physeq -> physeq
 
 physeq
+
+```
+
+```{r}
+physeq %>% 
+  sample_names() %>% 
+  sort() %>% 
+  head()
+
 ```
 
 
+```{r}
+here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv() %>% 
+  pull("sample") %>% 
+  sort() %>% 
+  head()
 
+```
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
 
 # ps@sam_data = NULL
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
                         readr::read_tsv(), sample_column = "sample") -> physeq_meta
 
 
-here::here("data/raw/metabarcoding/merged_chicken_human.tsv") %>%
+
+
+physeq;physeq_meta
+
+```
+
+
+```{r, eval=TRUE}
+source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+
+# ps@sam_data = NULL
+
+physeq %>%
+  physeq_add_metadata(physeq = .,
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
                         readr::read_tsv() %>% 
-  
-ifelse(!is.na(sample_data(physeq_meta)$Antibiotic_mg.mL), 
-       sample_data(physeq_meta)$Antibiotic_mg.mL, "")
-mutate(gradebook, Pass.Fail = ifelse(grade > 60, "Pass", "Fail"))
+    mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment),
+    Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+  , sample_column = "sample") -> physeq_meta
+
+
+# 
+# meta %>% 
+#     mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment)
+#     Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+
+# ifelse(!is.na(sample_data(physeq_meta)$Antibiotic_mg.mL), 
+#        sample_data(physeq_meta)$Antibiotic_mg.mL, "") %>% 
+# mutate(gradebook, Pass.Fail = ifelse(grade > 60, "Pass", "Fail"))
 
 
 
@@ -68,6 +111,29 @@ physeq;physeq_meta
 physeq_meta %>% 
   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"))
 ```
+
+600 samples initially and 471 with metadata ????
+
+```{r}
+intersect(
+  sample_names(physeq_meta),
+  sample_names(physeq)) %>% 
+  length()
+```
+
+```{r}
+difference <- function(x, y) {
+c(setdiff(x, y), setdiff(y, x))
+}
+
+difference(
+  sample_names(physeq),
+  sample_names(physeq_meta))
+```
+
+Above missing from the metadata but present in the initiall phyloseq object.
+
+
 
 ```{r}
 # physeq_meta %>% 

@@ -1,7 +1,7 @@
 ---
 title: "NRP72 -metadata - humann - chiken "
 author: "Florentin Constancias"
-date: "August 04, 2021"
+date: "August 09, 2021"
 output: 
   html_document: 
     toc: yes
@@ -92,7 +92,8 @@ here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
 ##   Paul = col_character(),
 ##   Reactor_Treatment = col_character(),
 ##   Model = col_character(),
-##   Antibiotic = col_character()
+##   Antibiotic = col_character(),
+##   metagenomic_sample_name = col_character()
 ## )
 ## ℹ Use `spec()` for the full column specifications.
 ```
@@ -136,7 +137,8 @@ physeq %>%
 ##   Paul = col_character(),
 ##   Reactor_Treatment = col_character(),
 ##   Model = col_character(),
-##   Antibiotic = col_character()
+##   Antibiotic = col_character(),
+##   metagenomic_sample_name = col_character()
 ## )
 ## ℹ Use `spec()` for the full column specifications.
 ```
@@ -156,7 +158,7 @@ physeq;physeq_meta
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
-## sample_data() Sample Data:       [ 600 samples by 59 sample variables ]
+## sample_data() Sample Data:       [ 600 samples by 61 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
 ## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
 ## refseq()      DNAStringSet:      [ 1155 reference sequences ]
@@ -202,7 +204,8 @@ physeq %>%
 ##   Paul = col_character(),
 ##   Reactor_Treatment = col_character(),
 ##   Model = col_character(),
-##   Antibiotic = col_character()
+##   Antibiotic = col_character(),
+##   metagenomic_sample_name = col_character()
 ## )
 ## ℹ Use `spec()` for the full column specifications.
 ```
@@ -235,7 +238,7 @@ physeq;physeq_meta
 ```
 ## phyloseq-class experiment-level object
 ## otu_table()   OTU Table:         [ 1155 taxa and 600 samples ]
-## sample_data() Sample Data:       [ 600 samples by 61 sample variables ]
+## sample_data() Sample Data:       [ 600 samples by 63 sample variables ]
 ## tax_table()   Taxonomy Table:    [ 1155 taxa by 7 taxonomic ranks ]
 ## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
 ## refseq()      DNAStringSet:      [ 1155 reference sequences ]

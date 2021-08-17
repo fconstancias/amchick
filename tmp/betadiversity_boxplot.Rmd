@@ -1,0 +1,134 @@
+---
+title: "Beta diversity box plot"
+author: "Sneha Sundar"
+date: "21/07/2021"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Load functions from Github
+
+```{r}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+
+#### Load physeq object
+
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+
+
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2") -> ps_PolyFermS
+
+```  
+
+We will be analysing only the PolyFermS samples here so take a subset of the physeq object.  
+```{r}
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2")-> ps_polyFermS
+
+sample_data(ps_polyFermS)$Reactor <- fct_relevel(sample_data(ps_polyFermS)$Reactor, "IR1", "CR", "TR1", "TR2","TR3", "TR4", "TR5", "TR6") 
+
+sample_data(ps_polyFermS)$Treatment <- fct_relevel(sample_data(ps_polyFermS)$Treatment, "UNTREATED",  "CTX+HV292.1", "CTX","HV292.1","VAN+CCUG59168", "VAN",  "CCUG59168") 
+
+sample_data(ps_polyFermS)$Reactor_Treatment <- fct_relevel(sample_data(ps_polyFermS)$Reactor_Treatment, "IR1_UNTREATED","CR_UNTREATED", "CR_CTX", "CR_VAN", "TR1_CTX+HV292.1","TR2_CTX", "TR3_HV292.1", "TR5_VAN+CCUG59168", "TR4_VAN", "TR6_CCUG59168") 
+
+ps_polyFermS %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123)->ps_polyFermS_rare
+```
+
+```{r}
+ps_polyFermS_rare %>% 
+  subset_samples(Reactor %in% c("CR","TR1","TR2")) -> ps_polyFermS_subset
+```
+
+Compute beta-div metrics:
+
+```{r}
+ps_polyFermS_subset %>%
+  phyloseq_compute_bdiv(
+                        phylo = TRUE,
+                        seed = 123) -> bdiv_list
+```
+```{r}
+bdiv_list$wjaccard
+```
+
+
+```{r}
+ps_polyFermS_subset %>% 
+phyloseq_distance_boxplot(dist= bdiv_list$wjaccard,d=c('Reactor')) -> plot
+
+```
+```{r}
+plot$plot + xlab(NULL) 
+```
+
+```{r}
+samples<-sample_data(ps_polyFermS_rare)$Sample_description[1:7]
+```
+
+```{r}
+toy_example <- ps_polyFermS_rare %>% 
+                  subset_samples(Sample_description %in% samples)
+```
+
+```{r}
+toy_example %>%
+  phyloseq_compute_bdiv(
+                        phylo = TRUE,
+                        seed = 123) -> bdiv_list
+```
+```{r}
+sample_data(toy_example)
+```
+```{r}
+toy_example %>% 
+phyloseq_distance_boxplot(dist= bdiv_list$wjaccard,d=c('plate')) -> plot
+
+```
+```{r}
+plot$plot + xlab(NULL) 
+```
+
+

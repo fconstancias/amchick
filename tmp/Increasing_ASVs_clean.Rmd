@@ -7,7 +7,7 @@ output: html_document
 
 
 Load required packages
-```{r message = FALSE error = FALSE}
+```{r, message=FALSE, error=FALSE}
 library(tidyverse)
 library(phyloseq)
 library(speedyseq)

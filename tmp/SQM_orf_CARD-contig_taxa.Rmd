@@ -1,0 +1,553 @@
+---
+title: "SqmAnalysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load required packages
+
+```{r,packages,message=FALSE}
+options(connectionObserver = NULL)
+
+# sudo R CMD INSTALL ~/miniconda3/envs/SqueezeMeta210601/lib/SQMtools
+# sudo R CMD INSTALL ~/miniconda3/envs/SqueezeMeta210601/lib/R/library/SQMtools/ 
+# sudo R CMD INSTALL /Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/SQMtools/
+# In my cas I had to specify the following. You should comment it and use the code above.
+# library('SQMtools', lib.loc = "/Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/")
+# easypackages::libraries(list.files("/Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/"))
+# library('SQMtools'); packageVersion("SQMtools")
+library('dplyr')
+library("tidyverse")
+library("ggplot2")
+library("grid")
+library("ggpubr")
+library("vegan")
+library("readxl")
+library("reshape2")
+library("RColorBrewer")
+# library("org.Hs.eg.db")
+```
+
+## Load SQM Project
+
+Note: You need the newest version of sqmtools.
+If you transferred your files from the euler cluster to your local computer, you need to change the installation path in your SqueezeMeta_conf.pl file 
+
+```{r, warning=FALSE}
+#chicken = loadSQM('/run/user/1000/gvfs/afp-volume:host=apollo.local,user=hannah,volume=hannah-chicken/SqueezeChicken', engine = 'data.table')
+#saveRDS(chicken, file = "chicken_SQM_funiden90.rds")
+pathSQM <- "data/raw/SQM/chicken_SQM.rds"
+
+pathSQM %>%
+  here::here() %>% 
+  readRDS() -> sqm
+```
+
+
+```{r, warning=FALSE}
+sqm$orfs$table %>%
+  data.frame()  -> orf_df
+  # filter(CARD_DB != "" ) %>%
+  # distinct(CARD_DB, .keep_all = TRUE) 
+ 
+
+orf_df %>% 
+  dim()
+```
+
+1 634 985 genes same as in SQM stats.
+
+based on CARD, contigs megahit_8588|megahit_219391 harbour vanA cluster and blaCTX, respectively
+
+```{r, warning=FALSE}
+sqm$orfs$tpm %>% #[1:10,1:10]
+  data.frame() %>% 
+  cbind(sqm$orfs$table) %>% #[1:10,1:10]
+  rownames_to_column("Contig.ID") %>% 
+  separate(Contig.ID, into = c("assembler","Contig_ID", "gene_id"), sep = "_", remove = FALSE) %>% 
+  mutate(Contig_ID = paste(assembler,Contig_ID, sep = "_")) -> ord_df
+```	
+
+```{r, warning=FALSE}
+ord_df %>% 
+  filter(grepl('\\bmegahit_8588\\b|\\bmegahit_219391\\b', Contig_ID)) -> ord_df_fil #%>%  
+
+ord_df_fil %>% 
+  DT::datatable()
+```	
+
+```{r, warning=FALSE}
+sqm$contigs$seqs %>% 
+  as.data.frame() %>% 
+  rownames_to_column("Contig.ID") %>% 
+  filter(grepl('\\bmegahit_8588\\b|\\bmegahit_219391\\b', Contig.ID)) %>%  
+  column_to_rownames('Contig.ID') -> seq_contig
+
+seq_contig
+```
+
+```{r, warning=FALSE}
+library(Biostrings)
+seq = seq_contig$.
+names(seq) = seq_contig %>%  rownames()
+dna = DNAStringSet(seq)
+
+dna
+
+Biostrings::writeXStringSet(dna, 
+                            here::here("tmp/contig_plasmids.fasta"))
+```
+
+```{r, warning=FALSE}
+ord_df_fil %>%
+  pivot_longer(cols = `TPM D1`:`TPM D9`,
+               names_to = "sample", values_to = "tmp") %>%
+  select(Contig.ID,gene_id,`Length NT`:PFAM, sample, tmp) %>% 
+  left_join(metadata,
+            by = c("sample" = "metagenomic_sample_name")) %>%
+  # filter(sample != "D43") %>%
+  mutate(tmp = na_if(tmp, 0)) %>% 
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = `CARD_DB NAME` ,
+                       fill = tmp # color = tmp,
+  )) +
+  facet_grid(Contig_ID ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE) +
+  geom_tile() +
+  theme_bw() + 
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::sqrt_trans(),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 500, 1000, 1500, 2100), labels = c(1, 10, 50, 100, 500, 1000, 1500, 2100),
+                       limits = c(0, 2100)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> plot
+
+plot
+```
+
+
+```{r, warning=FALSE}
+orf_df %>%
+  # select() %>%
+  dplyr::filter(`Gene.name` == "vanB, vanA, vanD") %>%
+  DT::datatable()
+```
+2 genes under vanB, vanA, vanD name.
+ARO:3000005	vanD - antibiotic target alteration; glycopeptide antibiotic
+ARO:3000010*	vanA - antibiotic target alteration; glycopeptide antibiotic
+
+```{r, warning=FALSE}
+orf_df %>%
+  # select() %>%
+  dplyr::filter(`KEGG.ID` == "K15739")
+```
+
+```{r, warning=FALSE}
+orf_df_60 %>%
+  # select() %>%
+  dplyr::filter(`KEGG.ID` == "K15739*")
+```
+same with KEGG id...
+
+```{r, warning=FALSE}
+orf_df_60 %>%
+  # select() %>%
+  dplyr::filter(`CARD_DB` == "ARO:3000010*")
+```
+
+```{r, warning=FALSE}
+sqm60$functions$CARD_DB$tpm %>%
+  data.frame() -> sqm60_CARD_DB_tpm
+
+# sqm60_CARD_DB_tpm 
+```
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>%
+  data.frame() %>%
+  filter(CARD_DB != "" ) %>%
+  distinct(CARD_DB, .keep_all = TRUE) %>%
+  data.frame() %>%
+  dplyr::select('CARD_DB', "CARD_DB.NAME") %>% 
+  separate('CARD_DB.NAME', into = c("gene", "card_hierarchy"), sep = " - ") %>%
+  mutate(Accession = stringi::stri_replace_all_fixed(CARD_DB, "*", '')) -> CARD_hierarchy 
+
+CARD_hierarchy %>%
+  head()
+```
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>%
+  data.frame() %>%
+  filter(CARD_DB != "" ) %>%
+  distinct(CARD_DB, .keep_all = TRUE) %>%
+  data.frame() %>%
+  dplyr::select('CARD_DB', "CARD_DB.NAME") %>% 
+  separate('CARD_DB.NAME', into = c("gene", "card_hierarchy"), sep = " - ") %>%
+  mutate(Accession = stringi::stri_replace_all_fixed(CARD_DB, "*", '')) -> CARD_hierarchy 
+
+CARD_hierarchy %>%
+  head()
+```
+
+```{r, warning=FALSE}
+CARD_hierarchy %>% 
+  mutate(card_hierarchy = strsplit(card_hierarchy, ";")) %>%
+  unnest(card_hierarchy) %>% # Note that if you don't want a wide dataset just stop command at unnest then you ended up with long data format
+  group_by(gene) %>%
+  mutate(row = row_number()) %>%
+  spread(row, card_hierarchy) -> CARD_hierarchy_split
+
+CARD_hierarchy_split
+```
+
+```{r, warning=FALSE}
+"~/Projects/ETH/Alessia/SQM/card-ontology/aro.tsv" %>%
+  read_tsv() -> CARD_def
+
+CARD_hierarchy_split %>%
+  left_join(CARD_def,
+            by = c("Accession" = "Accession")) -> full_card_def_hierarchy
+```
+
+```{r, warning=FALSE}
+sqm60_CARD_DB_tpm %>%
+  rownames_to_column("id") %>%
+  distinct(id, .keep_all = TRUE) %>%
+  mutate(id = stringi::stri_replace_all_fixed(id, "*", '')) %>%
+  left_join(full_card_def_hierarchy,
+            by = c("id" = "Accession")) %>%
+  filter(!is.na(Name)) %>%
+  unite(col = "display", c("Name", "id", "1", "2"),
+        sep = ";", remove = FALSE) %>%
+  rename("a" = "1",
+         "b" = "2") -> tmp
+```
+
+```{r, warning=FALSE}
+"~/Projects/ETH/Alessia/SQM/metadata.xlsx" %>% 
+  read_excel() %>%
+  select(-Sample_description:-index2) %>%
+  # mutate(Day_of_Treatment = as.numeric(Day_of_Treatment)) %>%
+  mutate(Day_of_Treatment = factor(Day_of_Treatment, levels = c("-1", "1", "3", "5", "30", "48"))) -> metadata
+```
+
+```{r, warning=FALSE}
+tmp %>%
+  filter(grepl('van', gene)) %>%
+  pivot_longer(cols = D1:D9,
+               names_to = "sample", values_to = "tmp") %>% 
+  left_join(metadata,
+            by = c("sample" = "metagenomic_sample_name")) %>%
+  filter(sample != "D43") %>%
+  # filter(Day_of_Treatment == "48" & Reactor_Treatment == "TR4_VAN") %>%
+  # distinct(id, .keep_all = TRUE) %>%
+  # group_by(display) %>%
+  # dplyr::mutate(Day_of_Treatment = fct_reorder(display, tmp, .desc = TRUE)) %>%
+  # ungroup() %>%
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = gene ,
+                       fill = tmp,
+                       color = tmp)) +
+  facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = FALSE) +
+  geom_tile() +
+  # geom_point(alpha=0.8) +
+  theme_bw() + #xlab("PERMANOVA") + ylab(NULL) +
+  # scale_size(range = c(0.1, 3.5), 
+  #            # trans = "log10",
+  #            name="PERMANOVA R2 value") + 
+  scale_color_viridis_c(name = "tmp",
+                        na.value = "transparent",
+                        trans = scales::pseudo_log_trans(sigma = 0.1)) + #,
+  # limits = c(0,0.05),
+  # breaks = c(1,0.05, 0.01, 0.001), 
+  # labels = c(1,0.05, 0.01, 0.001)) +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent",
+                       trans = scales::pseudo_log_trans(sigma = 0.1)) + #,
+  # limits = c(0,0.05),
+  # breaks = c(1,0.05, 0.01, 0.001), 
+  # labels = c(1,0.05, 0.01, 0.001)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+
+perma_bbuble %>% 
+  export::graph2ppt(append = TRUE,
+                    file = file.path(here::here("data/processed/figures_NRP72")))
+```
+there are some overlaps in id ...
+```{r, warning=FALSE}
+tmp %>%
+  filter(grepl('ARO:3001864', id))
+
+```
+
+```{r, warning=FALSE}
+tmp %>%
+  filter(grepl('CTX', gene))
+```
+
+
+```{r, warning=FALSE}
+tmp %>%
+  filter(grepl('CTX', gene)) %>%
+  pivot_longer(cols = D1:D9,
+               names_to = "sample", values_to = "tmp") %>% 
+  left_join(metadata,
+            by = c("sample" = "metagenomic_sample_name")) %>%
+  filter(sample != "D43") %>%
+  # group_by(display) %>%
+  # dplyr::mutate(Day_of_Treatment = fct_reorder(display, tmp, .desc = TRUE)) %>%
+  # ungroup() %>%
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = display ,
+                       fill = tmp,
+                       color = tmp)) +
+  facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = FALSE) +
+  geom_tile() +
+  # geom_point(alpha=0.8) +
+  theme_bw() + #xlab("PERMANOVA") + ylab(NULL) +
+  # scale_size(range = c(0.1, 3.5), 
+  #            # trans = "log10",
+  #            name="PERMANOVA R2 value") + 
+  scale_color_viridis_c(name = "tmp",
+                        na.value = "transparent",
+                        trans = scales::pseudo_log_trans(sigma = 0.1)) + #,
+  # limits = c(0,0.05),
+  # breaks = c(1,0.05, 0.01, 0.001), 
+  # labels = c(1,0.05, 0.01, 0.001)) +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent",
+                       trans = scales::pseudo_log_trans(sigma = 0.1)) + #,
+  # limits = c(0,0.05),
+  # breaks = c(1,0.05, 0.01, 0.001), 
+  # labels = c(1,0.05, 0.01, 0.001)) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+
+perma_bbuble %>% 
+  export::graph2ppt(append = TRUE,
+                    file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+```{r, warning=FALSE}
+"~/Projects/ETH/Alessia/SQM/metadata.xlsx" %>% 
+  read_excel() %>%
+  select(-Sample_description:-index2) %>%
+  # mutate(Day_of_Treatment = as.numeric(Day_of_Treatment)) %>%
+  mutate(Day_of_Treatment = factor(Day_of_Treatment, levels = c("-1", "1", "3", "5", "30", "48"))) -> metadata
+```
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>% data.frame() %>% 
+  filter(grepl('CTX-', CARD_DB.NAME)) %>%
+  select(Contig.ID, Gene.name, Tax, CARD_DB.NAME) %>%
+  DT::datatable()
+
+```
+megahit_131563	blaCTX-M
+
+```{r, warning=FALSE}
+sqm60$contigs$tax %>% as.data.frame() %>% 
+  rownames_to_column("Contig.ID") %>% 
+  filter(grepl('megahit_131563', Contig.ID)) %>%
+  # select(Contig.ID, Gene.name, Tax, CARD_DB.NAME) %>%
+  DT::datatable()
+
+```	
+```{r, warning=FALSE}
+sqm60$contigs$seqs %>% as.data.frame() %>% 
+  rownames_to_column("Contig.ID") %>% 
+  filter(grepl('megahit_131563', Contig.ID)) %>%  
+  column_to_rownames('Contig.ID') -> seq_contig
+
+seq_contig
+```
+
+```{r, warning=FALSE}
+
+library(Biostrings)
+seq = seq_contig$.
+names(seq) = seq_contig %>%  rownames()
+dna = DNAStringSet(seq)
+
+dna
+Biostrings::writeXStringSet(dna, "~/Projects/ETH/Alessia/SQM/megahit_131563.fasta")
+```
+3818 nt
+
+blast of the contig quickly on NCBI:
+
+Select seq MH846978.1 	Escherichia coli strain 11-448 plasmid p11-448 clone c1 genomic sequence
+7051 	7051 	100% 	0.0	100.00% 	MH846978.1
+Select seq KM377239.1 	Escherichia coli strain HV292 plasmid pHV292, complete sequence
+7038 	7038 	100% 	0.0	99.95% 	KM377239.1
+Select seq MH847502.1 	Escherichia coli strain 07-024 plasmid p07-024 clone c1 genomic sequence
+7029 	7194 	100% 	0.0	99.90% 	MH847502.1
+Select seq MN419438.1 	Escherichia coli strain 2016-40-24003 plasmid p24003, complete sequence
+7022 	7186 	100% 	0.0	99.87% 	MN419438.1
+Select seq LT985280.1 	Escherichia coli strain 13947 genome assembly, plasmid: RCS75_pI
+7022 	7186 	100% 	0.0	99.87% 	LT985280.1
+Select seq KM377240.1 	Escherichia coli strain HV295 plasmid pHV295, complete sequence
+7022 	7186 	100% 	0.0	99.87% 	KM377240.1
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>% data.frame() %>% 
+  # rownames_to_column("Contig.ID") %>% 
+  filter(grepl('megahit_131563', Contig.ID)) #%>%
+# DT::datatable()
+```	
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>% data.frame() %>% 
+  filter(grepl('vanA', CARD_DB.NAME)) %>%
+  select(Contig.ID, Gene.name, Tax, CARD_DB.NAME) %>%
+  DT::datatable()
+
+```
+
+```{r, warning=FALSE}
+sqm60$contigs$seqs %>% as.data.frame() %>% 
+  rownames_to_column("Contig.ID") %>% 
+  filter(grepl('megahit_41522|megahit_131563', Contig.ID)) %>%  
+  column_to_rownames('Contig.ID') -> seq_contig
+
+seq_contig
+```
+
+```{r, warning=FALSE}
+
+library(Biostrings)
+seq = seq_contig$.
+names(seq) = seq_contig %>%  rownames()
+dna = DNAStringSet(seq)
+
+dna
+Biostrings::writeXStringSet(dna, "~/Projects/ETH/Alessia/SQM/megahit_41522_megahit_131563.fasta")
+```
+
+```{r, warning=FALSE}
+sqm60$orfs$table %>% data.frame() %>% 
+  # rownames_to_column("Contig.ID") %>% 
+  filter(grepl('megahit_41522', Contig.ID)) #%>%
+# DT::datatable()
+```	
+
+```{r, warning=FALSE}
+sqm60$contigs$tpm %>% data.frame() %>% 
+  rownames_to_column("Contig.ID") %>%
+  filter(grepl('megahit_41522|megahit_131563', Contig.ID)) -> tmp #%>%  
+# DT::datatable()
+```	
+
+```{r, warning=FALSE}
+"~/Projects/ETH/Alessia/SQM/metadata.xlsx" %>% 
+  readxl::read_excel() %>%
+  dplyr::select(-Sample_description:-index2) %>%
+  # mutate(Day_of_Treatment = as.numeric(Day_of_Treatment)) %>%
+  mutate(Day_of_Treatment = factor(Day_of_Treatment, levels = c("-1", "1", "3", "5", "30", "48"))) -> metadata
+
+```
+
+```{r}
+# tmp %>%
+#   #filter(grepl('van', gene)) %>%
+#   pivot_longer(cols = D1:D9,
+#              names_to = "sample", values_to = "tmp") %>%
+#     left_join(metadata,
+#             by = c("sample" = "metagenomic_sample_name"))  %>% group_by(sample) %>%  
+#   mutate(pos = sum(tmp>0),
+#          neg = sum(tmp<0))
+
+tmp %>%
+  # filter(! grepl('Unclassified|Unmapped', display)) %>%
+    # filter(! grepl(0, categoryAR)) %>%
+  #filter(grepl('van', gene)) %>%
+  pivot_longer(cols = D1:D9,
+               names_to = "sample", values_to = "tmp") %>%
+  left_join(metadata,
+            by = c("sample" = "metagenomic_sample_name")) %>%
+  # filter(sample != "D43") %>%
+  mutate(tmp = na_if(tmp, 0)) %>% 
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = Contig.ID ,
+                       fill = tmp # color = tmp,
+  )) +
+  # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
+  facet_grid(. ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE) +
+  
+  geom_tile() +
+  theme_bw() + 
+  # scale_color_viridis_c(name = "tmp",
+  #                     na.value = "transparent",
+  #                     trans = scales::pseudo_log_trans(sigma = 0.1)) + 
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::sqrt_trans(),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 500, 1000, 1500, 2100), labels = c(1, 10, 50, 100, 500, 1000, 1500, 2100),
+                       limits = c(0, 2100)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+
+perma_bbuble %>% 
+  export::graph2ppt(append = TRUE,
+                    file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+
+```{r, warning=FALSE}
+sqm60$orfs$tpm %>% data.frame() %>% 
+  cbind(sqm60$orfs$table) %>% 
+  rownames_to_column("Contig.ID") %>% 
+  separate(Contig.ID, into = c("Contig_ID", "gene_id"), sep = "_", remove = FALSE) %>% 
+  mutate(Contig_ID = paste(Contig_ID,gene_id, sep = "_")) %>% 
+  filter(grepl('megahit_41522|megahit_131563', Contig_ID)) -> tmp #%>%  
+# DT::datatable()
+```	
+
+```{r, fig.height= 5, fig.width= 6}
+tmp %>%
+  # filter(! grepl('Unclassified|Unmapped', display)) %>%
+    # filter(! grepl(0, categoryAR)) %>%
+  #filter(grepl('van', gene)) %>%
+  pivot_longer(cols = D1:D9,
+               names_to = "sample", values_to = "tmp") %>%
+  left_join(metadata,
+            by = c("sample" = "metagenomic_sample_name")) %>%
+  # filter(sample != "D43") %>%
+  mutate(tmp = na_if(tmp, 0)) %>% 
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = `COGFUN` ,
+                       fill = tmp # color = tmp,
+  )) +
+  # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
+  facet_grid(Contig_ID ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE) +
+  
+  geom_tile() +
+  theme_bw() + 
+  # scale_color_viridis_c(name = "tmp",
+  #                     na.value = "transparent",
+  #                     trans = scales::pseudo_log_trans(sigma = 0.1)) + 
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::sqrt_trans(),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 500, 1000, 1500, 2100), labels = c(1, 10, 50, 100, 500, 1000, 1500, 2100),
+                       limits = c(0, 2100)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+
+perma_bbuble %>% 
+  export::graph2ppt(append = TRUE,
+                    file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+```{r}
+sessionInfo()
+```

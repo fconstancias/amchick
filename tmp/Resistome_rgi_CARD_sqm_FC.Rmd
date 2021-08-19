@@ -95,7 +95,7 @@ fil_df %>%
   DT::datatable()
 
 fil_df %>% 
-  write_tsv(here::here("tmp/rgi_card_table,tsv"))
+  write_tsv(here::here("tmp/rgi_card_table.tsv"))
 ```
 
 # heatmap with empty

@@ -82,6 +82,7 @@ df %>%
          Drug.Class,
          Resistance.Mechanism,
          AMR.Gene.Family,
+         Best_Identities,
          Percentage.Length.of.Reference.Sequence,
          Note,
          "Length AA",
@@ -92,6 +93,9 @@ df %>%
 
 fil_df %>% 
   DT::datatable()
+
+fil_df %>% 
+  write_tsv(here::here("tmp/rgi_card_table,tsv"))
 ```
 
 # heatmap with empty

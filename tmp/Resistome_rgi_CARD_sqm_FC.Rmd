@@ -131,6 +131,7 @@ fil_df %>%
   select(Day_of_Treatment, Best_Hit_ARO, tmp, Drug.Class, Reactor_Treatment, ORF_ID) %>% 
   mutate(Day_of_Treatment = as.factor(Day_of_Treatment)) %>% 
    mutate(tmp = na_if(tmp, 0)) %>%
+    mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
   ggplot(mapping = aes(x = Day_of_Treatment,
                        y = Best_Hit_ARO ,
                        fill = tmp,
@@ -144,6 +145,30 @@ perma_bbuble
 ```
 
 ```{r, fig.height=18, fig.width=16}
+perma_bbuble +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
+                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r, fig.height=16, fig.width=12}
+perma_bbuble +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
+                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r, fig.height=12, fig.width=10}
 perma_bbuble +
   scale_fill_viridis_c(name = "tmp",
                        na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),

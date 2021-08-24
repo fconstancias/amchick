@@ -1,0 +1,378 @@
+---
+title: "Differntially Abundant ASVs within Reactors"
+author: "Sneha Sundar"
+date: "`r format(Sys.time(), "%a %b %d %X %Y")`"
+output: html_document
+---
+
+
+Load required packages
+```{r, message=FALSE, error=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(ggpubr)
+library(plotly)
+library(microbiome)
+library(here)
+library(UpSetR)
+library(dunn.test)
+library("xlsx")
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+library(scales)
+```
+
+Load required functions
+```{r}
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+Load phyloseq object
+
+#NOTE @Alessia  you might need to change this if you do not have the a local version of the github amchick repo. If it does not work, let me/Florentin know. 
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+
+```
+
+We want only continuous samples.
+```{r}
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Reactor != "IR2") -> ps_polyFermS
+```
+
+Rarefying the data
+```{r message = FALSE}
+ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_rare
+```
+Taking only the unenriched samples, getting rid of dubious sample, and taking just one reactor say TR1 for easy working . 
+```{r}
+ps_rare %>%
+  subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
+  subset_samples(Reactor %in% c('TR1'))-> TR1
+
+TR1 %>% sample_data() %>% as.matrix() %>% as.data.frame()
+```
+
+Filter so that all ASVs that are not present in these samples are removed. 
+```{r}
+TR1_f <- filter_taxa(TR1, function(x) sum(x) > 0, TRUE)
+```
+
+Remove taxa not seen in at least 20% of the samples. This protects against an OTU with small mean & trivially large C.V.
+```{r}
+TR1_f <- filter_taxa(TR1_f, function(x) sum(x > 0) > (0.2*length(x)), TRUE)
+```
+
+Merging the sample data and otu data into one big data frame
+
+```{r}
+TR1_f_otu<- t(as(otu_table(TR1_f),"matrix")) %>% data.frame(check.names=FALSE) %>% rownames_to_column("SampleID")
+
+TR1_f_sample <- as(sample_data(TR1_f),"matrix") %>% data.frame(check.names=FALSE) %>% rownames_to_column("SampleID")
+
+TR1_f_sample
+
+```
+
+Take only the columns we are interested in, make time column numeric
+```{r}
+joined_tr1<-TR1_f_otu %>% inner_join(TR1_f_sample) %>% 
+pivot_longer(cols = starts_with("ASV"),names_to = "ASV",values_to = "Abundances" ) %>% 
+  select(all_of(c('SampleID','Day_of_Treatment','Reactor_Treatment','ASV','Abundances'))) %>% 
+  mutate(Day_of_Treatment = as.numeric(Day_of_Treatment))
+```
+Create a new column indicating the treatment period Alessia and Anna have described
+```{r}
+joined_tr1<- joined_tr1 %>%
+  mutate(
+    Period = case_when(
+      Day_of_Treatment == -2 | Day_of_Treatment == -3 | Day_of_Treatment == -6 | Day_of_Treatment == -7 ~ "pret",
+      Day_of_Treatment < 10 & Day_of_Treatment >= 0 ~ "t1",
+      Day_of_Treatment < 20 & Day_of_Treatment >= 10 ~ "t2",
+      Day_of_Treatment < 30 & Day_of_Treatment >= 20 ~ "t3",
+      Day_of_Treatment < 40 & Day_of_Treatment >= 30 ~ "t4",
+      Day_of_Treatment < 50 & Day_of_Treatment >= 40 ~ "t5",
+    )
+  )
+
+
+```
+
+Remove rows with NA 
+```{r}
+joined_tr1 <- na.omit(joined_tr1)
+
+```
+ 
+``
+Group by reactor_treatment, Period and ASV and then summarize using mean . Oh yeah this worked!
+
+
+
+
+```{r}
+mean_joined_tr1<-joined_tr1 %>% group_by(Reactor_Treatment,ASV,Period) %>% 
+  summarise(Mean = round(mean(Abundances,1)),
+            sd = round(sd(Abundances),1))
+mean_joined_tr1<-mean_joined_tr1 %>% unite("MeanSD",Mean:sd, sep = " \u00b1 ", remove = TRUE, na.rm = FALSE)
+
+mean_joined_tr1<-mean_joined_tr1 %>% pivot_wider(names_from = Period, values_from = MeanSD)
+```
+Next steps use a statistical method to test the ASV means of the 6 periods . Increasing trend ? should  I plot it and see . ..... hmm . linear regression as before ????
+
+Create factor levels from the Period column. These are the groups we wish to compare
+```{r}
+
+joined_tr1$Period <- ordered(joined_tr1$Period,
+                         levels = c("pret", "t1", "t2","t3","t4","t5"))
+
+```
+
+
+```{r}
+Kruskal.TR1<-joined_tr1 %>% group_by(Reactor_Treatment,ASV) %>% 
+  summarise(Kruskal.pvalue = kruskal.test(Abundances ~ Period)$p.value)
+
+sum(Kruskal.TR1$Kruskal.pvalue <= 0.05)
+sigASVs_TR1<-Kruskal.TR1[Kruskal.TR1$Kruskal.pvalue <= 0.05,'ASV']
+```
+
+```{r}
+
+```
+
+
+
+
+Lets pick one ASV to do the statistical test for a simple example
+```{r}
+asv_toy <- joined_tr1 %>% filter(ASV %in% sigASVs_TR1$ASV[1:3]) 
+
+asv_toy
+
+group_by(asv_toy,Reactor_Treatment,ASV,Period) %>%
+  summarise(
+    count = n(),
+    mean = mean(Abundances, na.rm = TRUE),
+    sd = sd(Abundances, na.rm = TRUE),
+    median = median(Abundances, na.rm = TRUE),
+    IQR = IQR(Abundances, na.rm = TRUE)
+  )
+
+```
+```{r}
+asv_toy<-asv_toy %>% group_by(Reactor_Treatment,ASV,Period)
+
+group_vars(asv_toy)
+```
+
+
+```{r}
+ggline(asv_toy, x = "Period", y = "Abundances",
+       add = c("mean_sd","jitter"),add.params = list(color = "Period",alpha=0.7), 
+       order = c("pret", "t1", "t2","t3","t4","t5"),
+       ylab = "Abundances", xlab = "Treatment_Period",facet.by = "ASV")
+
+```
+
+```{r}
+res<-kruskal.test(Abundances ~ Period, data = asv_toy)
+```
+
+```{r}
+res
+```
+
+
+
+
+```{r}
+res<-dunn.test(asv_toy$Abundances,asv_toy$Period,method="bh",alpha=0.05)
+```
+
+
+```{r}
+res
+```
+
+```{r}
+res<-pairwise.wilcox.test(asv_toy$Abundances,asv_toy$Period,p.adj="BH")
+
+
+
+res$p.value
+```
+
+
+Taking only the unenriched samples, getting rid of dubious sample.
+
+```{r}
+ps_rare %>%
+  subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_rare
+```
+
+We need to filter out ASVs that are not stably present in the reactor.This is how we are going to do so:
+
+Say there are 30 samples in TR5. If at least 10 samples have more than 3 counts for ASVxxx the particular ASV is considered. Otherwise that ASV is discarded and will not be considered in the analysis to identify trends for TR5. 
+
+```{r}
+#function that checks whether a particular ASV should be kept
+
+#taxa_name <- name of ASV to check
+#sub <- phyloseq object
+#fraction <- min threshold (default 0.33) this is the fraction of samples that need to have more then `min_count` for that ASV in order to keep it. 
+#min_ASV_count <- minimum count of `taxa_name` in a sample in order to consider that sample (default 3)
+keep_ASV<- function(taxa_name,sub,fraction=0.33, min_ASV_count=3){
+  return(sum(otu_table(sub)[taxa_name]>min_ASV_count) >= floor(nsamples(sub)*fraction))
+   }
+
+
+remove_ASVs_from_reactor <- function(physeq, fraction,min_ASV_count,col_name, value_to_subset){
+  #take only the samples we want to look at .
+  is_value_to_subset = sample_data(physeq)[[col_name]] == value_to_subset
+  subset_physeq<- prune_samples(is_value_to_subset,physeq)
+  #remove taxa that are not present in all samples
+  subset_physeq <- prune_taxa(taxa_sums(subset_physeq)>0,subset_physeq) 
+  
+  #apply function `keep_ASV` to all the taxa in the phyloseq object. We will get a logical vector indicating whether or not we should consider the ASV in our analysis. 
+  keep<-sapply(taxa_names(subset_physeq),keep_ASV,subset_physeq,fraction,min_ASV_count)
+  
+  #remove the ASVS that need to be discarded from the phyloseq object
+  return(prune_taxa(keep,subset_physeq))
+}
+```
+
+
+An example of how `remove_ASVs_from_reactor` works . In TR1, this will remove ASVs that do not have more than 3 ASV counts in one third of the samples. 
+```{r}
+sub<-remove_ASVs_from_reactor(ps_rare,0.33,3,'Reactor_Treatment',"CR_UNTREATED")
+
+sub %>% sample_data() %>% as.matrix() %>% as.data.frame()
+```
+
+Create a function that tests whether each ASV present in a reactor after filtering is differentially abundant among of pre-defined treatment periods. 
+
+Treatment Periods
+
+Day_of_Treatment    Treatment_Period
+-----------------   -----------------
+  -2,-3,-6,-7             pret
+  $\geq$ 0,$<$ 10         t1
+  $\geq$ 10,$<$ 20        t2
+  $\geq$ 20,$<$ 30        t3
+  $\geq$ 30,$<$ 40        t4
+  $\geq$ 40,$<$ 50        t5
+  
+We will use **Kruskal-Wallis rank sum test**, the non-parametric one-way ANOVA, that tests whether multiple groups originate from the same population distribution. However, it is important to note that the groups are assumed to be independent samples. In our case, I am not sure if the groups are truly independent since the samples will be correlated across time.  But since this seems otherwise to be the best kind of statistical test for our data, we will proceed with this. 
+
+Since within a reactor we are sampling across time, another option might be a repeated measures ANOVA, but since we have only one sample for each time point and we need to assume normality, this might not be a good choice. 
+
+Since we are essentially testing each ASV within a reactor, should we perform multiple testing correction? 
+
+Function for performing the Kruskal-Wallis on each ASV within a subset of samples (in this case within a reactor). Returns a dataframe with the taxa name, ASV abundances in each treatment period, and p value of the Kruskal-Wallis test 
+```{r}
+#Function for performing the Kruskal-Wallis on each ASV within a subset of samples
+
+#physeq ->  the phyloseq object (preferably where the ASVs have been filtered appropriately)
+
+diff_abundant_ASV_Kruskal <- function(physeq){
+  
+  #Merging the sample data and otu data into one big data frame
+  
+  physeq_otu<- t(as(otu_table(physeq),"matrix")) %>% data.frame(check.names=FALSE) %>%
+                rownames_to_column("SampleID")
+
+  physeq_sample <- as(sample_data(physeq),"matrix") %>% data.frame(check.names=FALSE) %>%
+                      rownames_to_column("SampleID")
+
+
+  joined_physeq <- physeq_otu %>% inner_join(physeq_sample) %>% 
+                    pivot_longer(cols = starts_with("ASV"),names_to = "ASV",values_to = "Abundances" ) %>%  
+    #Take only the columns we are interested in, make time column numeric
+  select(all_of(c('SampleID','Day_of_Treatment','Reactor_Treatment','ASV','Abundances'))) %>% 
+  mutate(Day_of_Treatment = as.numeric(Day_of_Treatment))
+  
+  #create a new column in `joined_physeq` indicating the pre-defined treatment periods
+  joined_physeq<- joined_physeq %>%
+  mutate(
+    Period = case_when(
+      Day_of_Treatment == -2 | Day_of_Treatment == -3 | Day_of_Treatment == -6 | Day_of_Treatment == -7 ~ "pret",
+      Day_of_Treatment < 10 & Day_of_Treatment >= 0 ~ "t1",
+      Day_of_Treatment < 20 & Day_of_Treatment >= 10 ~ "t2",
+      Day_of_Treatment < 30 & Day_of_Treatment >= 20 ~ "t3",
+      Day_of_Treatment < 40 & Day_of_Treatment >= 30 ~ "t4",
+      Day_of_Treatment < 50 & Day_of_Treatment >= 40 ~ "t5",
+    )
+  )
+  #remove rows with NA
+  joined_physeq <- na.omit(joined_physeq)
+
+  #Create factor levels from the Period column. These are the groups we wish to compare
+  joined_physeq$Period <- ordered(joined_physeq$Period,levels =c("pret","t1","t2","t3","t4","t5"))
+
+  Kruskal.physeq<-joined_physeq %>% group_by(ASV) %>% 
+    summarise(Kruskal.pvalue = round(kruskal.test(Abundances ~ Period)$p.value,3)) %>% 
+    #arrange(Kruskal.pvalue) %>% 
+    mutate(Significant = Kruskal.pvalue<=0.05)
+  
+  
+  #create a nice table to show the results. This table inludes the taxonomic information, p value of the Kruskal-Wallis test, mean ASV abundance +- SD of the various tretment periods and whether the results of the test were signifiacant
+  
+  mean_joined_physeq <- joined_physeq %>% group_by(Reactor_Treatment,ASV,Period) %>% 
+    summarise(mean = round(mean(Abundances,1)),
+            sd = round(sd(Abundances),1)) %>% 
+    unite("MeanSD",mean:sd, sep = " \u00b1 ", remove = TRUE, na.rm = FALSE) %>%
+    pivot_wider(names_from = Period, values_from = MeanSD) 
+  
+   physeq_tax_table <- as(tax_table(physeq),"matrix") %>%
+     data.frame(check.names=FALSE) %>%
+                      rownames_to_column("ASV")
+  
+   res <- right_join(physeq_tax_table,left_join(Kruskal.physeq,mean_joined_physeq)) %>% arrange(Kruskal.pvalue)
+  
+  return(res)
+
+}
+```
+
+```{r}
+res <- diff_abundant_ASV_Kruskal(sub)
+
+res
+```
+
+```{r}
+
+reactors <- ps_rare %>% get_variable('Reactor_Treatment') %>% as.vector() %>% unique()
+
+for(reactor in reactors){
+  
+  reactor_subset<-remove_ASVs_from_reactor(ps_rare,0.33,3,'Reactor_Treatment',reactor)
+  
+  res <- diff_abundant_ASV_Kruskal(reactor_subset)
+  
+  write.csv(res,paste0(reactor,".csv"),quote = FALSE,row.names = FALSE,fileEncoding = "UTF-8")
+  
+}
+```

@@ -9,7 +9,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
 #### Load required packages
 
@@ -23,6 +22,7 @@ library(plotly)
 library(microbiome)
 library(tidyHeatmap)
 library(here)
+library(RColorBrewer)
 options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
 #this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
 ```
@@ -40,24 +40,26 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 ```
 
 
-#### Import phyloseq object
+#### Import phyloseq object and do some preprocessing: keeping only continous, non-IR2, non-Paul samples and removing ASVs that are not present in any samples
 
 ```{r}
 ps = "data/processed/physeq_update_11_1_21.RDS"
 
 ps %>% 
   here::here() %>%
-  readRDS() -> physeq
-  #phyloseq_get_strains_fast() %>%
-  #phyloseq_remove_chloro_mitho() > physeq
+  readRDS() %>% 
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
 
-
+#keep only continuous, non-IR2, non-Paul samples
 physeq %>% 
   subset_samples(Experiment == "Continuous") %>% 
   subset_samples(Paul %!in% c("Paul")) %>%
   subset_samples(Reactor %!in% c("IR2")) -> ps_PolyFermS
 
-ps_PolyFermS
+#removing ASVs that are not present in any samples
+ps_PolyFermS <- ps_PolyFermS %>% filter_taxa(function(x) sum(x) > 0, TRUE)
+
 ```
 
 We need a heatmap 
@@ -113,4 +115,124 @@ par(cex=1)
 title(xlab="Sample_name", ylab="", main="Cluster dendogram")
 axis(2)
 ```
+## Some understanding of heatmaps
+
+
+```{r}
+data <- mtcars
+
+data <- mtcars %>% as.matrix()
+
+data
+```
+
+Set color palette
+```{r}
+
+```
+
+
+```{r}
+
+
+my_group <- as.numeric(as.factor(substr(rownames(data), 1 , 1)))
+colSide <- brewer.pal(10, "Set3")[my_group]
+colMain <- colorRampPalette(brewer.pal(8, "Blues"))(25)
+stats::heatmap(data, Colv = NA, Rowv = NA, scale="column" , RowSideColors=colSide, col=colMain)
+
+```
+```{r}
+data_ps<-ps_PolyFermS %>% otu_table() %>% as.matrix()
+
+taxa_table<- tax_table(ps_PolyFermS) %>% as.matrix() %>% as.data.frame()
+
+asv_labels<-taxa_table$Strain[1:40]
+toy_data<-data_ps[,c(3,64,34,23,78)]
+stats::heatmap(toy_data,cexRow = 0.1, labRow = asv_labels )
+
+asv_labels
+```
+
+?stats::heatmap
+
+
+```{r}
+
+phyloseq_heatmap_dendogram <- function(physeq, norm=FALSE, distance_metric = 'bray'){
+  if(norm == "percent")
+  {
+    physeq %>%
+      transform_sample_counts(function(x) {x/sum(x)} * 100) -> physeq
+  }
+  
+
+  
+  otu.matrix <- as(otu_table(physeq), "matrix") 
+  
+  #only certain distances are possible unifrac isnt because 
+  # it needs the phytree as well and we are using only otutable. 
+  distance_fun <- function(matrix_otu_table, 
+                           dist_metric=distance_metric){
+    
+  dist_obj <- phyloseq::distance(otu_table(matrix_otu_table,taxa_are_rows = TRUE),dist_metric)
+  
+  
+  
+  return(dist_obj)
+  }
+  
+  out <- stats::heatmap(otu.matrix,distfun = distance_fun,
+Rowv = NA,
+Colv = NA,cexRow=0.3,cexCol=0.3)
+  
+  
+  return(out)
+  
+  }
+
+```
+
+
+```{r}
+out<-phyloseq_heatmap_dendogram(ps_PolyFermS)
+
+
+```
+
+
+```{r}
+tidyHeatmap::N52 %>% 
+  group_by(`Cell type`)
+```
+```{r}
+#rows are samples, columns are ASV
+otu_df <-ps_polyFermS_rare %>% 
+           otu_table() %>% 
+           as.matrix() %>% 
+           t() %>% 
+           as.data.frame()
+
+#when should we scale the columns
+tidy_otu_df <- otu_df %>% 
+  
+  as_tibble(rownames="Sample_name") %>% 
+  
+  # tidyfy
+    pivot_longer(cols = -c(Sample_name), names_to = "ASV", values_to = "Value")
+  
+tidy_otu_df
+
+                 
+```
+
+```{r}
+otu_heatmap <- 
+    tidy_otu_df %>% 
+        tidyHeatmap::heatmap(ASV,Sample_name, Value,.scale = "column",cluster_rows = FALSE ) %>% 
+  add_tile
+
+
+otu_heatmap
+```
+#this works . 
 

@@ -1,0 +1,123 @@
+---
+title: "Compare trend of genus specfic ASVs with unique sequence qPCR data"
+author: "Sneha Sundar"
+date: "29/04/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load required packages
+
+```{r message = FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+
+```
+
+## Source necessary functions
+```{r message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+## Load phyloseq object
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+
+
+```
+
+
+## Some preprocessing :
+
+### We need only PolyFermS samples, specifically the UnEnriched samples. We also do not need Paul's samples, IR2 samples and also the dubious samples that might have been mislabelled. 
+
+```{r}
+
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Paul %!in% c("Paul")) %>%
+  subset_samples(Reactor != "IR2") %>% 
+  subset_samples(Enrichment == 'NotEnriched') %>% 
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_polyFermS # heatmap reveals they might be coming from VAN treated or enrichments 
+```
+
+
+### Rarefying the data
+
+```{r message = FALSE}
+ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_polyFermS_rare
+
+```
+
+
+
+### Normalize the otu counts with qPCR data
+
+```{r}
+ps_polyFermS_rare %>% phyloseq_density_normalize(value_idx  = "GeneCopyNumberperML") -> norm_ps_polyFermS_rare
+```
+
+### Creating a new scales transformation object that does a log10(1+x) transformation. 
+```{r}
+log10p_trans<-function(){trans_new(name="log10p",
+                                   transform=function(x){return(log10(x+1))},inverse=function(xt){return((10^xt) - 1)})}
+  
+
+```
+
+## Compare trend of genus-specific ASVs with unique sequence qPCR data
+
+### We first plot the qpcr-normalized abundances of all ASVs belonging to genus Escherichia-Shigella along with the HV292.1 strain-specific qpcr data as well as CTX gene-specific qPCR data. 
+```{r, message=FALSE}
+out_genus_ecoli<-plot_taxa_abundances_over_time(physeq = norm_ps_polyFermS_rare, taxa_level = "Genus", 
+                                                  taxa_to_plot= c("Escherichia-Shigella"),
+                                                  time_column = 'Day_from_Inoculum',
+                                                  other_columns_to_plot= c("HV292.1_Copy_Number_permL","CTX_Copy_Number_permL") ,
+                                                  axis_transform=FALSE,
+                                                  transformation = 'log1p',
+                                                  plot_total = FALSE,
+                                                  data_facet1='Reactor_Treatment',
+                                                  data_facet2=NULL,
+                                                  n_facet_row=4,
+                                                  n_facet_col=2)
+
+
+
+out_genus_ecoli$plot + scale_y_continuous(breaks=c(0,1e+5,2e+10),trans=log10p_trans()) + xlab('Day from Inoculum')
+```
+### We first plot the qpcr-normalized abundances of all ASVs belonging to genus Enterococcus along with the CCUG59168 strain-specific qpcr data as well as VAN gene-specific qPCR data. 
+```{r ,message=FALSE}
+out_genus_enterococcus<-plot_taxa_abundances_over_time(physeq = norm_ps_polyFermS_rare, taxa_level = "Genus", 
+                                                  taxa_to_plot= c("Enterococcus"),
+                                                  time_column = 'Day_from_Inoculum',                                        other_columns_to_plot=c("CCUG59168_Copy_Number_permL","VAN_Copy_Number_permL") ,
+                                                  axis_transform=FALSE,
+                                                  transformation = 'log1p',
+                                                  plot_total = FALSE,
+                                                  data_facet1='Reactor_Treatment',
+                                                  data_facet2=NULL,
+                                                  n_facet_row=4,
+                                                  n_facet_col=2)
+
+
+
+out_genus_enterococcus$plot + scale_y_continuous(breaks=c(0,1e+5,2e+10),trans=log10p_trans()) + xlab('Day from Inoculum')
+```
+

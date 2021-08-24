@@ -1,0 +1,92 @@
+ASV,Kingdom,Phylum,Class,Order,Family,Genus,Species,Strain,Kruskal.pvalue,Significant,Reactor_Treatment,pret,t1,t2,t3,t4,t5
+ASV084,Bacteria,Firmicutes,Bacilli,Lactobacillales,Enterococcaceae,Enterococcus,NA,unknown Enterococcus (Genus) ASV084,0.005,TRUE,TR2_CTX,2 ± 3.3,65 ± 59.6,284 ± 137.9,484 ± 223.4,822 ± 388.2,530 ± 201.5
+ASV133,Bacteria,Firmicutes,Clostridia,Clostridia vadinBB60 group,NA,NA,NA,unknown Clostridia vadinBB60 group (Order) ASV133,0.009,TRUE,TR2_CTX,4 ± 2.5,10 ± 60.5,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV093,Bacteria,Firmicutes,Bacilli,Bacillales,Planococcaceae,NA,NA,unknown Planococcaceae (Family) ASV093,0.011,TRUE,TR2_CTX,307 ± 22.8,66 ± 52.6,50 ± 13.4,12 ± 3.5,0 ± 0,108 ± 122.3
+ASV161,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Flavonifractor,NA,unknown Flavonifractor (Genus) ASV161,0.011,TRUE,TR2_CTX,127 ± 8.3,102 ± 42,36 ± 6.4,6 ± 3.5,6 ± 1.4,11 ± 4.2
+ASV149,Bacteria,Firmicutes,Clostridia,Oscillospirales,Butyricicoccaceae,Butyricicoccus,NA,unknown Butyricicoccus (Genus) ASV149,0.012,TRUE,TR2_CTX,3 ± 1.9,0 ± 1.1,2 ± 2.1,26 ± 4.9,25 ± 0,10 ± 10.6
+ASV258,Bacteria,Firmicutes,Clostridia,Clostridia UCG-014,NA,NA,NA,unknown Clostridia UCG-014 (Order) ASV258,0.014,TRUE,TR2_CTX,117 ± 25.9,2 ± 21.5,0 ± 0.7,0 ± 0,0 ± 0,0 ± 0
+ASV347,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Eisenbergiella,NA,unknown Eisenbergiella (Genus) ASV347,0.014,TRUE,TR2_CTX,14 ± 1.7,0 ± 3.9,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV166,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Flavonifractor,NA,unknown Flavonifractor (Genus) ASV166,0.015,TRUE,TR2_CTX,0 ± 2.5,12 ± 127,372 ± 6.4,338 ± 111.7,300 ± 121.6,106 ± 27.6
+ASV292,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV292,0.016,TRUE,TR2_CTX,80 ± 30.1,2 ± 5,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV346,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Eisenbergiella,NA,unknown Eisenbergiella (Genus) ASV346,0.016,TRUE,TR2_CTX,46 ± 8.2,1 ± 16.2,261 ± 260.2,19 ± 25.5,31 ± 32.5,103 ± 38.2
+ASV141,Bacteria,Firmicutes,Clostridia,Lachnospirales,Defluviitaleaceae,Defluviitaleaceae UCG-011,NA,unknown Defluviitaleaceae UCG-011 (Genus) ASV141,0.017,TRUE,TR2_CTX,23 ± 5.7,0 ± 7,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV091,Bacteria,Firmicutes,Bacilli,Bacillales,Bacillaceae,Bacillus,NA,unknown Bacillus (Genus) ASV091,0.018,TRUE,TR2_CTX,113 ± 174.1,470 ± 600.1,484 ± 365.6,12 ± 11.3,0 ± 0,0 ± 0
+ASV136,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnospiraceae UCG-010,NA,unknown Lachnospiraceae UCG-010 (Genus) ASV136,0.019,TRUE,TR2_CTX,10 ± 3.4,0 ± 3.2,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV373,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV373,0.019,TRUE,TR2_CTX,6 ± 3.5,59 ± 25.9,32 ± 6.4,88 ± 14.1,88 ± 51.6,104 ± 23.3
+ASV290,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnospira,NA,unknown Lachnospira (Genus) ASV290,0.02,TRUE,TR2_CTX,36 ± 8.7,0 ± 8,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV174,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Oscillospira,NA,unknown Oscillospira (Genus) ASV174,0.023,TRUE,TR2_CTX,16 ± 6,0 ± 6,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV215,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,NA,NA,unknown Ruminococcaceae (Family) ASV215,0.023,TRUE,TR2_CTX,42 ± 17.3,0 ± 16.2,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV289,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnospira,NA,unknown Lachnospira (Genus) ASV289,0.023,TRUE,TR2_CTX,130 ± 24,0 ± 26,1 ± 1.4,0 ± 0,0 ± 0,0 ± 0
+ASV351,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Sellimonas,NA,unknown Sellimonas (Genus) ASV351,0.025,TRUE,TR2_CTX,60 ± 4.2,159 ± 78.8,44 ± 7.1,87 ± 9.9,98 ± 4.9,68 ± 10.6
+ASV140,Bacteria,Firmicutes,Clostridia,Lachnospirales,Defluviitaleaceae,Defluviitaleaceae UCG-011,NA,unknown Defluviitaleaceae UCG-011 (Genus) ASV140,0.03,TRUE,TR2_CTX,14 ± 6.6,0 ± 6.3,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV142,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Tyzzerella,NA,unknown Tyzzerella (Genus) ASV142,0.03,TRUE,TR2_CTX,78 ± 6.4,0 ± 28.2,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV170,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Intestinimonas,NA,unknown Intestinimonas (Genus) ASV170,0.033,TRUE,TR2_CTX,59 ± 14.2,0 ± 23,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV356,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV356,0.033,TRUE,TR2_CTX,15 ± 12,0 ± 7,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV216,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,UBA1819,NA,unknown UBA1819 (Genus) ASV216,0.036,TRUE,TR2_CTX,4 ± 1,0 ± 1.4,2 ± 3.5,0 ± 0,0 ± 0,0 ± 0
+ASV065,Bacteria,Firmicutes,Bacilli,Erysipelotrichales,Erysipelatoclostridiaceae,Erysipelatoclostridium,NA,unknown Erysipelatoclostridium (Genus) ASV065,0.037,TRUE,TR2_CTX,32 ± 24.2,2 ± 14.8,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV316,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Blautia,NA,unknown Blautia (Genus) ASV316,0.039,TRUE,TR2_CTX,92 ± 20.2,96 ± 36.5,32 ± 12,42 ± 4.2,70 ± 6.4,70 ± 3.5
+ASV245,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Negativibacillus,NA,unknown Negativibacillus (Genus) ASV245,0.042,TRUE,TR2_CTX,120 ± 32.5,2 ± 49.8,1 ± 1.4,0 ± 0,0 ± 0,0 ± 0
+ASV394,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV394,0.043,TRUE,TR2_CTX,20 ± 9,54 ± 39.1,110 ± 14.8,155 ± 41,100 ± 1.4,28 ± 8.5
+ASV155,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,NA,NA,unknown Oscillospiraceae (Family) ASV155,0.044,TRUE,TR2_CTX,11 ± 4.7,4 ± 3.9,12 ± 0.7,7 ± 7.1,0 ± 0,1 ± 0
+ASV163,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Flavonifractor,plautii,Flavonifractor plautii ASV163,0.046,TRUE,TR2_CTX,1 ± 1.3,2 ± 4.3,12 ± 4.2,8 ± 6.4,6 ± 3.5,226 ± 60.8
+ASV362,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV362,0.048,TRUE,TR2_CTX,0 ± 0,16 ± 39.2,38 ± 16.3,56 ± 23.3,114 ± 14.8,28 ± 8.5
+ASV207,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Incertae Sedis,NA,unknown Incertae Sedis (Genus) ASV207,0.05,TRUE,TR2_CTX,90 ± 12.7,128 ± 46.7,140 ± 17.7,84 ± 12,82 ± 33.9,60 ± 6.4
+ASV398,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV398,0.05,TRUE,TR2_CTX,44 ± 2.8,44 ± 22,56 ± 4.9,134 ± 25.5,110 ± 70,33 ± 9.9
+ASV357,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV357,0.051,FALSE,TR2_CTX,74 ± 40.1,3 ± 41,4 ± 0.7,0 ± 0,0 ± 0,10 ± 2.1
+ASV397,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV397,0.051,FALSE,TR2_CTX,127 ± 34,3 ± 70.1,0 ± 0,0 ± 0,0 ± 0,0 ± 0.7
+ASV389,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV389,0.054,FALSE,TR2_CTX,8 ± 3,385 ± 227.3,326 ± 141.4,365 ± 2.8,226 ± 55.2,204 ± 40.3
+ASV157,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Intestinimonas,NA,unknown Intestinimonas (Genus) ASV157,0.055,FALSE,TR2_CTX,28 ± 9.2,3 ± 13.5,8 ± 0.7,0 ± 0,0 ± 0,1 ± 1.4
+ASV276,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,GCA-900066575,NA,unknown GCA-900066575 (Genus) ASV276,0.056,FALSE,TR2_CTX,18 ± 6.4,0 ± 8,0 ± 0.7,0 ± 0,3 ± 0,12 ± 0.7
+ASV235,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,NA,NA,unknown Ruminococcaceae (Family) ASV235,0.06,FALSE,TR2_CTX,17 ± 5.2,12 ± 7.9,8 ± 3.5,2 ± 2.1,18 ± 17.7,32 ± 4.9
+ASV022,Bacteria,Proteobacteria,Gammaproteobacteria,Enterobacterales,Morganellaceae,Proteus,NA,unknown Proteus (Genus) ASV022,0.061,FALSE,TR2_CTX,1128 ± 327.4,43 ± 498.1,18 ± 3.5,135 ± 181,5 ± 1.4,96 ± 106.8
+ASV352,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Sellimonas,intestinalis,Sellimonas intestinalis ASV352,0.061,FALSE,TR2_CTX,0 ± 0,1 ± 7.1,2 ± 3.5,6 ± 3.5,14 ± 1.4,15 ± 1.4
+ASV280,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnospiraceae FCS020 group,NA,unknown Lachnospiraceae FCS020 group (Genus) ASV280,0.064,FALSE,TR2_CTX,0 ± 1,10 ± 14.6,6 ± 0,12 ± 4.9,16 ± 4.9,20 ± 4.2
+ASV165,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Pseudoflavonifractor,capillosus,Pseudoflavonifractor capillosus ASV165,0.065,FALSE,TR2_CTX,6 ± 6.6,36 ± 29.5,50 ± 16.3,70 ± 2.1,96 ± 116.7,292 ± 10.6
+ASV217,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Pygmaiobacter,NA,unknown Pygmaiobacter (Genus) ASV217,0.065,FALSE,TR2_CTX,0 ± 0,102 ± 93.6,96 ± 1.4,186 ± 3.5,160 ± 52.3,90 ± 24.7
+ASV162,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Flavonifractor,NA,unknown Flavonifractor (Genus) ASV162,0.066,FALSE,TR2_CTX,8 ± 3.8,8 ± 7.6,20 ± 1.4,6 ± 0.7,0 ± 0,1 ± 1.4
+ASV171,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Colidextribacter,NA,unknown Colidextribacter (Genus) ASV171,0.075,FALSE,TR2_CTX,40 ± 7.6,2 ± 29.2,16 ± 10.6,0 ± 0,0 ± 0,0 ± 0
+ASV190,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,NK4A214 group,NA,unknown NK4A214 group (Genus) ASV190,0.076,FALSE,TR2_CTX,18 ± 4.8,47 ± 15.3,24 ± 4.2,40 ± 2.8,28 ± 6.4,26 ± 6.4
+ASV208,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Incertae Sedis,NA,unknown Incertae Sedis (Genus) ASV208,0.076,FALSE,TR2_CTX,0 ± 0,4 ± 8.4,6 ± 0.7,18 ± 13.4,12 ± 0.7,8 ± 4.9
+ASV382,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV382,0.076,FALSE,TR2_CTX,60 ± 9.7,240 ± 116.3,278 ± 34.6,364 ± 72.8,234 ± 40.3,223 ± 48.1
+ASV196,Bacteria,Firmicutes,Clostridia,Oscillospirales,[Eubacterium] coprostanoligenes group,NA,NA,unknown [Eubacterium] coprostanoligenes group (Family) ASV196,0.08,FALSE,TR2_CTX,6 ± 2.4,2 ± 11.6,16 ± 9.2,0 ± 0,0 ± 0,2 ± 2.8
+ASV200,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,NA,NA,unknown Ruminococcaceae (Family) ASV200,0.08,FALSE,TR2_CTX,34 ± 11.1,0 ± 52.4,2 ± 3.5,0 ± 0.7,0 ± 0,0 ± 0
+ASV176,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Oscillibacter,NA,unknown Oscillibacter (Genus) ASV176,0.081,FALSE,TR2_CTX,44 ± 22.3,8 ± 75.4,175 ± 17,194 ± 38.2,109 ± 0,82 ± 23.3
+ASV203,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Incertae Sedis,NA,unknown Incertae Sedis (Genus) ASV203,0.082,FALSE,TR2_CTX,2 ± 2.8,2 ± 4.9,0 ± 0.7,0 ± 0,0 ± 0,0 ± 0
+ASV329,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Marvinbryantia,NA,unknown Marvinbryantia (Genus) ASV329,0.087,FALSE,TR2_CTX,0 ± 0,4 ± 2.7,2 ± 2.8,2 ± 1.4,4 ± 6.4,0 ± 0
+ASV030,Bacteria,Actinobacteriota,Coriobacteriia,Coriobacteriales,Eggerthellaceae,CHKCI002,NA,unknown CHKCI002 (Genus) ASV030,0.09,FALSE,TR2_CTX,14 ± 10.8,9 ± 37.2,117 ± 45.3,84 ± 31.8,35 ± 15.6,14 ± 14.8
+ASV092,Bacteria,Firmicutes,Bacilli,Bacillales,Bacillaceae,Bacillus,NA,unknown Bacillus (Genus) ASV092,0.091,FALSE,TR2_CTX,9 ± 12.7,14 ± 39,16 ± 16.3,0 ± 0,0 ± 0,0 ± 0
+ASV172,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Colidextribacter,NA,unknown Colidextribacter (Genus) ASV172,0.093,FALSE,TR2_CTX,10 ± 3.6,0 ± 11,8 ± 2.8,0 ± 0,0 ± 0,0 ± 0
+ASV384,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV384,0.101,FALSE,TR2_CTX,12 ± 7.5,2 ± 8,4 ± 0.7,2 ± 2.1,2 ± 3.5,5 ± 1.4
+ASV138,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Tuzzerella,NA,unknown Tuzzerella (Genus) ASV138,0.102,FALSE,TR2_CTX,170 ± 40.9,1 ± 122.7,53 ± 70.7,24 ± 29,206 ± 269.4,362 ± 95.5
+ASV083,Bacteria,Firmicutes,Bacilli,Lactobacillales,Enterococcaceae,Enterococcus,NA,unknown Enterococcus (Genus) ASV083,0.103,FALSE,TR2_CTX,0 ± 0,3 ± 3.1,1 ± 1.4,2 ± 3.5,10 ± 13.4,18 ± 4.2
+ASV211,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Incertae Sedis,NA,unknown Incertae Sedis (Genus) ASV211,0.105,FALSE,TR2_CTX,4 ± 1.7,2 ± 1.5,4 ± 4.2,20 ± 3.5,8 ± 2.1,4 ± 2.1
+ASV210,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,NA,NA,unknown Ruminococcaceae (Family) ASV210,0.108,FALSE,TR2_CTX,1 ± 1.9,8 ± 6.6,10 ± 2.8,12 ± 2.8,5 ± 1.4,7 ± 2.8
+ASV099,Bacteria,Firmicutes,Clostridia,Christensenellales,Christensenellaceae,NA,NA,unknown Christensenellaceae (Family) ASV099,0.109,FALSE,TR2_CTX,0 ± 2.9,4 ± 13.8,21 ± 0,0 ± 0.7,1 ± 0,28 ± 13.4
+ASV230,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,NA,NA,unknown Ruminococcaceae (Family) ASV230,0.113,FALSE,TR2_CTX,436 ± 79.7,823 ± 190.8,588 ± 10.6,635 ± 28.3,633 ± 60.8,601 ± 297
+ASV336,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Sellimonas,NA,unknown Sellimonas (Genus) ASV336,0.117,FALSE,TR2_CTX,6 ± 3.9,0 ± 3.5,11 ± 8.5,6 ± 4.2,0 ± 0.7,6 ± 2.1
+ASV062,Bacteria,Firmicutes,Bacilli,Erysipelotrichales,Erysipelatoclostridiaceae,NA,NA,unknown Erysipelatoclostridiaceae (Family) ASV062,0.121,FALSE,TR2_CTX,81 ± 7.7,2 ± 36.1,6 ± 3.5,3 ± 0,6 ± 0.7,2 ± 1.4
+ASV324,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV324,0.14,FALSE,TR2_CTX,1 ± 0.8,2 ± 1.9,0 ± 0.7,5 ± 0,2 ± 2.1,3 ± 1.4
+ASV328,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Marvinbryantia,NA,unknown Marvinbryantia (Genus) ASV328,0.143,FALSE,TR2_CTX,0 ± 0,5 ± 3.5,2 ± 0.7,2 ± 2.8,3 ± 4.2,0 ± 0
+ASV359,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV359,0.162,FALSE,TR2_CTX,0 ± 1,0 ± 17.9,36 ± 18.4,12 ± 1.4,24 ± 33.2,22 ± 9.9
+ASV309,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Marvinbryantia,NA,unknown Marvinbryantia (Genus) ASV309,0.164,FALSE,TR2_CTX,0 ± 1,6 ± 20.2,6 ± 3.5,34 ± 17.7,2 ± 3.5,7 ± 4.2
+ASV387,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV387,0.164,FALSE,TR2_CTX,12 ± 5.7,6 ± 15.3,2 ± 1.4,5 ± 5.7,2 ± 0.7,3 ± 0
+ASV335,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Sellimonas,NA,unknown Sellimonas (Genus) ASV335,0.165,FALSE,TR2_CTX,10 ± 3.6,2 ± 6.8,10 ± 0.7,11 ± 5.7,12 ± 12,24 ± 5.7
+ASV337,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Sellimonas,NA,unknown Sellimonas (Genus) ASV337,0.173,FALSE,TR2_CTX,5 ± 2.6,0 ± 4.9,9 ± 7.1,2 ± 0.7,0 ± 0,2 ± 3.5
+ASV020,Bacteria,Proteobacteria,Gammaproteobacteria,Enterobacterales,Enterobacteriaceae,Escherichia-Shigella,NA,unknown Escherichia-Shigella (Genus) ASV020,0.187,FALSE,TR2_CTX,64 ± 30,14 ± 19,6 ± 1.4,148 ± 202.2,3 ± 4.2,20 ± 23.3
+ASV361,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV361,0.205,FALSE,TR2_CTX,46 ± 6.5,56 ± 95.5,102 ± 40.3,166 ± 50.2,256 ± 79.9,108 ± 0.7
+ASV332,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,NA,NA,unknown Lachnospiraceae (Family) ASV332,0.209,FALSE,TR2_CTX,6 ± 2.2,7 ± 10.7,6 ± 4.9,16 ± 0.7,46 ± 27.6,6 ± 0.7
+ASV195,Bacteria,Firmicutes,Clostridia,Oscillospirales,[Eubacterium] coprostanoligenes group,NA,NA,unknown [Eubacterium] coprostanoligenes group (Family) ASV195,0.218,FALSE,TR2_CTX,4 ± 2.2,0 ± 2.4,8 ± 7.8,0 ± 0,0 ± 0,2 ± 2.8
+ASV188,Bacteria,Firmicutes,Clostridia,Monoglobales,Monoglobaceae,Monoglobus,NA,unknown Monoglobus (Genus) ASV188,0.22,FALSE,TR2_CTX,5 ± 3.4,0 ± 4.6,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV252,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Ruminococcus,NA,unknown Ruminococcus (Genus) ASV252,0.249,FALSE,TR2_CTX,2 ± 3.4,2 ± 1.5,5 ± 4.2,4 ± 0,3 ± 0,9 ± 1.4
+ASV383,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV383,0.268,FALSE,TR2_CTX,12 ± 2.2,8 ± 6.8,18 ± 13.4,9 ± 4.2,2 ± 2.1,4 ± 2.1
+ASV363,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV363,0.277,FALSE,TR2_CTX,12 ± 9.9,2 ± 3.8,4 ± 0.7,2 ± 1.4,2 ± 3.5,4 ± 0.7
+ASV145,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Eubacterium] hallii group,NA,unknown [Eubacterium] hallii group (Genus) ASV145,0.292,FALSE,TR2_CTX,43 ± 26.5,54 ± 27.9,31 ± 15.6,33 ± 14.1,26 ± 19.1,14 ± 6.4
+ASV222,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Pygmaiobacter,NA,unknown Pygmaiobacter (Genus) ASV222,0.328,FALSE,TR2_CTX,1 ± 0.5,3 ± 6.5,6 ± 6.4,4 ± 2.1,4 ± 4.2,4 ± 2.1
+ASV124,Bacteria,Firmicutes,Clostridia,Clostridia vadinBB60 group,NA,NA,NA,unknown Clostridia vadinBB60 group (Order) ASV124,0.361,FALSE,TR2_CTX,2 ± 1,2 ± 91.6,97 ± 134.4,146 ± 201.5,168 ± 236.9,153 ± 210.7
+ASV221,Bacteria,Firmicutes,Clostridia,Oscillospirales,Ruminococcaceae,Pygmaiobacter,NA,unknown Pygmaiobacter (Genus) ASV221,0.386,FALSE,TR2_CTX,4 ± 1.7,8 ± 7.6,14 ± 15.6,10 ± 11.3,6 ± 1.4,10 ± 7.8
+ASV368,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,[Ruminococcus] torques group,NA,unknown [Ruminococcus] torques group (Genus) ASV368,0.387,FALSE,TR2_CTX,112 ± 33.9,125 ± 80.1,208 ± 43.1,134 ± 6.4,122 ± 2.1,88 ± 20.5
+ASV167,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Intestinimonas,timonensis,Intestinimonas timonensis ASV167,0.39,FALSE,TR2_CTX,4 ± 18.6,2 ± 24.1,0 ± 0,0 ± 0,0 ± 0,0 ± 0
+ASV330,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,CAG-56,NA,unknown CAG-56 (Genus) ASV330,0.394,FALSE,TR2_CTX,2 ± 4.4,18 ± 50.4,0 ± 0.7,2 ± 1.4,4 ± 4.9,2 ± 0.7
+ASV385,Bacteria,Firmicutes,Clostridia,Lachnospirales,Lachnospiraceae,Lachnoclostridium,NA,unknown Lachnoclostridium (Genus) ASV385,0.41,FALSE,TR2_CTX,9 ± 3.9,13 ± 7.5,16 ± 9.2,6 ± 0.7,8 ± 4.9,11 ± 5.7
+ASV135,Bacteria,Firmicutes,Clostridia,Clostridia vadinBB60 group,NA,NA,NA,unknown Clostridia vadinBB60 group (Order) ASV135,0.637,FALSE,TR2_CTX,1 ± 1.2,4 ± 11,4 ± 0.7,4 ± 4.9,8 ± 7.8,6 ± 8.5
+ASV175,Bacteria,Firmicutes,Clostridia,Oscillospirales,Oscillospiraceae,Oscillibacter,valericigenes,Oscillibacter valericigenes ASV175,0.73,FALSE,TR2_CTX,16 ± 7.4,30 ± 19,26 ± 2.1,12 ± 2.1,12 ± 4.9,16 ± 6.4

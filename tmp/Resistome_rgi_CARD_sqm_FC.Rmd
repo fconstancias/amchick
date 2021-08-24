@@ -1,0 +1,186 @@
+---
+title: "Resistome - gene level - rgiCARD"
+author: "Florentin Constancias"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(here)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Source required functions
+
+```{r message=FALSE}
+rm(list = ls())
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+# Import data:
+
+```{r}
+ps = "data/raw/rgi_CARD/sqm_rgi_chicken.txt"
+  
+ps %>% 
+  here::here() %>%
+  read_tsv() -> df
+
+df %>% 
+  head() %>% 
+  DT::datatable()
+```
+```{r}
+ps = "data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv"
+  
+ps %>% 
+  here::here() %>%
+  read_tsv() %>% 
+  filter(metagenomic_sample_name %!in% NA) -> meta
+
+meta %>% 
+  head() %>% 
+  DT::datatable()
+```
+
+# Filtering:
+
+```{r}
+type = c("protein homolog model")
+
+df %>% 
+  filter(Model_type %in% type,
+         Cut_Off == "Strict",
+         Nudged %!in% c("TRUE"),
+         Best_Identities > 95, # plot disteibution of bestID vs percentage length ref and color bitscore and symbol class AMR
+         Percentage.Length.of.Reference.Sequence > 80) %>% 
+  select(ORF_ID,
+         Best_Hit_ARO,
+         Model_type,
+         Drug.Class,
+         Resistance.Mechanism,
+         AMR.Gene.Family,
+         Best_Identities,
+         Percentage.Length.of.Reference.Sequence,
+         Note,
+         "Length AA",
+         "Gene name",
+         "Contig ID", 
+         starts_with("TPM"),
+         ) -> fil_df
+
+fil_df %>% 
+  DT::datatable()
+
+fil_df %>% 
+  write_tsv(here::here("tmp/rgi_card_table.tsv"))
+```
+
+# heatmap with empty
+```{r, fig.height=12, fig.width=10}
+fil_df %>% 
+  pivot_longer(cols = `TPM D1`:`TPM D9`,
+               names_to = "sample", values_to = "tmp") %>%   
+  mutate(sample = str_remove(sample, "TPM ")) %>% 
+  left_join(meta %>% 
+              select(raw_metagenomic_pairs, metagenomic_sample_name,
+                     Treatment, Day_of_Treatment, Fermentation, Reactor_Treatment),
+            by = c("sample" = "metagenomic_sample_name")) %>% 
+   mutate(tmp = na_if(tmp, 0)) %>%
+  ggplot(mapping = aes(x = sample,
+                       y = Best_Hit_ARO ,
+                       fill = tmp, color = tmp,
+  )) +
+  # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
+  facet_grid(Drug.Class ~ Reactor_Treatment + Day_of_Treatment, scales = "free", space = "free", drop = TRUE) +
+  geom_tile()
+
+```
+
+```{r, fig.height=18, fig.width=16}
+fil_df %>% 
+  pivot_longer(cols = `TPM D1`:`TPM D9`,
+               names_to = "sample", values_to = "tmp") %>%   
+  mutate(sample = str_remove(sample, "TPM ")) %>% 
+  left_join(meta %>% 
+              select(raw_metagenomic_pairs, metagenomic_sample_name,
+                     Treatment, Day_of_Treatment, Fermentation, Reactor_Treatment),
+            by = c("sample" = "metagenomic_sample_name")) %>% 
+  select(Day_of_Treatment, Best_Hit_ARO, tmp, Drug.Class, Reactor_Treatment, ORF_ID) %>% 
+  mutate(Day_of_Treatment = as.factor(Day_of_Treatment)) %>% 
+   mutate(tmp = na_if(tmp, 0)) %>%
+    mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+  ggplot(mapping = aes(x = Day_of_Treatment,
+                       y = Best_Hit_ARO ,
+                       fill = tmp,
+  )) +
+  # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
+  facet_grid(Drug.Class ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE) +
+  geom_tile() +
+  theme_bw() -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r, fig.height=18, fig.width=16}
+perma_bbuble +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
+                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r, fig.height=16, fig.width=12}
+perma_bbuble +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
+                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r, fig.height=12, fig.width=10}
+perma_bbuble +
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
+                       # trans =  scales::pseudo_log_trans(sigma = 1),
+                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
+                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+
+perma_bbuble
+```
+
+```{r}
+sessionInfo()
+```
+

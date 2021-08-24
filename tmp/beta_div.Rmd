@@ -102,7 +102,7 @@ coda$PCA + geom_point(size=2,
                    aes(color = Reactor_Treatment, 
                        fill = Reactor_Treatment,
                        shape = NULL,
-                       alpha = Day_from_Inoculum)) + 
+                       alpha = Day_of_Treatment)) + 
   theme_light() +
   geom_path(arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")),
               size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment), show.legend = FALSE) +

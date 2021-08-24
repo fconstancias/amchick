@@ -1,0 +1,316 @@
+---
+title: "NRP72 - figures - metabarcoding - humann - alpha"
+author: "Florentin Constancias"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+library(here)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Source required functions
+
+```{r message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+```{r}
+plot_time <- function(df, 
+                      measure,
+                      x = "Day_from_Inoculum", 
+                      y = "value", 
+                      shape = "neg",
+                      fill = "Reactor_Treatment",
+                      group = "Reactor_Treatment", 
+                      point_size=0.5,
+                      facet,
+                      smooth = FALSE)
+{
+  df %>%
+    dplyr::filter(alphadiversiy %in% measure) %>%
+    dplyr::mutate(alphadiversiy = fct_reorder(alphadiversiy, value, .desc = TRUE)) %>%
+    dplyr::mutate(neg = ifelse(value == 0, "neg", "pos")) %>%
+    arrange(Day_from_Inoculum) %>%
+    ggplot(aes_string(x = x,
+                      y = y)) +
+    geom_jitter(alpha=0.9, size = point_size, aes_string(color = fill, fill = fill, shape = shape),  show.legend = TRUE) + 
+    geom_path(inherit.aes = TRUE, aes_string(fill = fill, color = fill, show.legend = FALSE),
+              size = 0.01,
+              linetype = "dashed") +
+    facet_grid(as.formula(facet), scales = "free") +
+    geom_vline(xintercept = c(0),
+               color="black", alpha=0.4) + theme_light() -> plot
+  
+  if(smooth == TRUE) 
+  {
+    plot +
+      geom_smooth(show.legend = FALSE, level = 0.95, alpha=0.005, size = 0.5 ,aes_string(color = fill, fill = fill))  -> plot
+  }
+  # scale_y_continuous(labels = scientific,
+  #                    limits=c(1e+10, 1e+11), breaks = seq(1e+10, 1e+11, by = 1e+10),
+  #                    trans = "log10") +
+  
+  
+  return(plot + theme(legend.position = "bottom"))
+}
+```
+
+# Import phyloseq object
+
+```{r}
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>% 
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+  subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(Model == "Human")  -> physeq
+
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
+```
+
+
+# Rarefaction:
+
+## Curves
+```{r, results= 'hide'}
+require(parallel)
+
+physeq %>%
+  ggrare(step = 100, parallel = TRUE,  se = FALSE, 
+         color = "Day_of_Treatment" , plot = FALSE) -> rare_curves
+```
+
+```{r}
+rare_curves +
+  theme_classic() + 
+  geom_vline(xintercept = sample_sums(physeq) %>% min(),
+             color="red", 
+             linetype="dashed", size=0.25) + 
+  facet_wrap(~ Reactor_Treatment) + ylab("ASV Richness") -> rare_plot
+
+rare_plot
+
+# rare_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                   file = file.path(here::here("data/processed/figures_NRP72")))
+```
+chicken rarefaction was 4576, let see how it looks here.
+
+```{r}
+rare_curves +
+  theme_classic() + facet_null() + coord_cartesian(xlim = c(0,5000))
+```
+
+## Rarefaction:
+
+```{r}
+physeq %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123) -> physeq_rare
+
+physeq_rare
+```
+
+```{r, results= 'hide'}
+require(parallel)
+
+physeq_rare %>%
+  ggrare(step = 50, parallel = TRUE,  se = FALSE, 
+         color = "Day_of_Treatment" , plot = FALSE) -> rare_rare_curves
+```
+
+```{r}
+rare_rare_curves +
+  theme_classic() + 
+  geom_vline(xintercept = sample_sums(physeq_rare) %>% min(),
+             color="red", 
+             linetype="dashed", size=0.25) + 
+  facet_wrap(~ Reactor_Treatment) + ylab("ASV Richness") -> rare_rare_plot
+
+rare_rare_plot
+
+# rare_rare_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                   file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+# alpha_div:
+
+#### Alpha diversity measures over time
+
+```{r message = FALSE, warning = FALSE , results='hide'}
+physeq_rare %>%
+  phyloseq_alphas(phylo = FALSE) -> alpha_df
+```
+
+```{r message=FALSE}
+measures_alpha = c("Observed", "diversity_shannon", "evenness_pielou")#, "PD","MNTD", "SES.MPD" ,"bNTI")
+
+alpha_df %>%
+  plot_alphas(measure = measures_alpha,
+              x_group = "Reactor_Treatment",
+              colour_group = "Enrichment",
+              fill_group = "Enrichment",
+              shape_group = "Enrichment",
+              facet_group = "Reactor_Treatment",
+              test_group = "Reactor_Treatment",
+              test_group_2 = "Enrichment") -> alpha_out 
+```
+
+
+```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
+
+alpha_out$plot$data %>%
+  filter(Treatment %!in% c("DONOR", "positive", "negative", "STRAIN")) %>% 
+  filter(!is.na(Fermentation)) %>% 
+  filter(Day_of_Treatment > -5) %>% 
+  plot_time(measure = measures_alpha,
+            x = "Day_of_Treatment",
+            facet = c("alphadiversiy ~ Fermentation"),
+            fill = "Treatment",
+            group = "Treatment",
+            shape = "Reactor",
+            smooth = TRUE,
+            point_size = 1) + 
+  labs(x="Day (from Treatment)", y= "alpha-diversity",  
+       col=NULL, fill = NULL, shape = NULL) + 
+  guides(col = guide_legend(ncol = 3))  +
+  scale_color_viridis_d(na.value = "black") +
+  scale_fill_viridis_d(na.value = "black")  -> alpha_div_plot
+
+alpha_div_plot
+
+# alpha_div_plot %>% 
+# export::graph2ppt(append = TRUE,
+#                 file = file.path(here::here("data/processed/figures_NRP72")))
+plotly::ggplotly(alpha_div_plot)
+```
+
+
+```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
+
+alpha_div_plot  + geom_boxplot(aes(group = Treatment,
+                                   color =Treatment,
+                                   fill = Treatment),
+                               outlier.shape = NA,
+                               outlier.colour = NA,
+                               # outlier.shape = NA,
+                               alpha = 0.2) + guides(col = guide_legend(ncol = 3)) -> alpha_div_plot
+
+alpha_div_plot 
+
+# alpha_div_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+```{r}
+alpha_out$stat %>% 
+  filter(signif == "SIGN") %>% 
+  arrange(alphadiversiy) %>% 
+  DT::datatable()
+```
+
+```{r}
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>% 
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+  subset_samples(Enrichment == "NotEnriched") %>% 
+    rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123)  %>% 
+    subset_samples(Experiment == "Continuous")  -> tmp_rare
+  
+```
+
+```{r message = FALSE, warning = FALSE , results='hide'}
+tmp_rare %>%
+  phyloseq_alphas(phylo = FALSE) -> alpha_df
+```
+
+```{r message=FALSE}
+measures_alpha = c("Observed", "diversity_shannon", "evenness_pielou")#, "PD","MNTD", "SES.MPD" ,"bNTI")
+
+alpha_df %>%
+  plot_alphas(measure = measures_alpha,
+              x_group = "Reactor_Treatment",
+              colour_group = "Enrichment",
+              fill_group = "Enrichment",
+              shape_group = "Enrichment",
+              facet_group = "Reactor_Treatment",
+              test_group = "Reactor_Treatment",
+              test_group_2 = "Enrichment") -> alpha_out 
+```
+
+
+```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
+
+alpha_out$plot$data %>%
+  # filter(Treatment %!in% c("DONOR", "positive", "negative", "STRAIN")) %>% 
+  # filter(!is.na(Fermentation)) %>% 
+  filter(Day_of_Treatment > -5, Day_of_Treatment < 20) %>%
+  plot_time(measure = measures_alpha,
+            x = "Day_of_Treatment",
+            facet = c("alphadiversiy ~ Model + Fermentation"),
+            fill = "Treatment",
+            group = "Treatment",
+            shape = NULL,
+            smooth = TRUE,
+            point_size = 1) + 
+  labs(x="Day (from Treatment)", y= "alpha-diversity",  
+       col=NULL, fill = NULL, shape = NULL) + 
+  guides(col = guide_legend(ncol = 3))  +
+  scale_color_viridis_d(na.value = "black") +
+  scale_fill_viridis_d(na.value = "black")  -> alpha_div_plot
+
+alpha_div_plot
+```
+
+
+```{r, fig.height=6, fig.width=4, warning = FALSE, message = FALSE, results = TRUE}
+
+# alpha_div_plot %>% 
+# export::graph2ppt(append = TRUE,
+#                 file = file.path(here::here("data/processed/figures_NRP72")))
+plotly::ggplotly(alpha_div_plot)
+```
+
+
+```{r}
+sessionInfo()
+```

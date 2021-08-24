@@ -1,0 +1,285 @@
+---
+title: "NRP72 - figures - metabarcoding -humann - taxa"
+author: "Florentin Constancias"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Load required packages
+
+```{r,packages,message=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ggrepel)
+library(ampvis2)
+library(plotly)
+library(microbiome)
+library(here)
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+#### Source required functions
+
+```{r message=FALSE}
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
+```
+
+```{r}
+plot_time <- function(df, 
+                      measure,
+                      x = "Day_from_Inoculum", 
+                      y = "value", 
+                      shape = "neg",
+                      fill = "Reactor_Treatment",
+                      group = "Reactor_Treatment", 
+                      point_size=0.5,
+                      facet,
+                      smooth = FALSE)
+{
+  df %>%
+    dplyr::filter(alphadiversiy %in% measure) %>%
+    dplyr::mutate(alphadiversiy = fct_reorder(alphadiversiy, value, .desc = TRUE)) %>%
+    dplyr::mutate(neg = ifelse(value == 0, "neg", "pos")) %>%
+    arrange(Day_from_Inoculum) %>%
+    ggplot(aes_string(x = x,
+                      y = y)) +
+    geom_jitter(alpha=0.9, size = point_size, aes_string(color = fill, fill = fill, shape = shape),  show.legend = TRUE) + 
+    geom_path(inherit.aes = TRUE, aes_string(fill = fill, color = fill, show.legend = FALSE),
+              size = 0.01,
+              linetype = "dashed") +
+    facet_grid(as.formula(facet), scales = "free") +
+    geom_vline(xintercept = c(0),
+               color="black", alpha=0.4) + theme_light() -> plot
+  
+  if(smooth == TRUE) 
+  {
+    plot +
+      geom_smooth(show.legend = FALSE, level = 0.95, alpha=0.005, size = 0.5 ,aes_string(color = fill, fill = fill))  -> plot
+  }
+  # scale_y_continuous(labels = scientific,
+  #                    limits=c(1e+10, 1e+11), breaks = seq(1e+10, 1e+11, by = 1e+10),
+  #                    trans = "log10") +
+  
+  
+  return(plot + theme(legend.position = "bottom"))
+}
+```
+
+# Inspection of strains:
+
+
+```{r, fig.width= 8, fig.height=8}
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>% 
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+  prune_samples(sample_sums(.)>= 100, .) %>% # only keep samples with at least 100 seqs.
+  subset_samples(Reactor %in% c("STRAIN", "negative", "positive"))  %>% 
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "compositional",
+                          group_by = "SampleID",
+                          facet_by = c("Fermentation", "Enrichment", "Reactor", "Reactor_Treatment"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 50) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~ Reactor , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       labels = c(0,  0.01, 1, 10, 50, 75, 100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```  
+
+
+# Import phyloseq object
+
+```{r}
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>% 
+  filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
+  subset_samples(Enrichment == "NotEnriched") -> physeq
+
+physeq
+
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
+```
+
+
+# Rarefaction:
+
+```{r}
+physeq %>% 
+  rarefy_even_depth(sample.size = 4576,
+                    rngseed = 123) -> physeq_rare
+
+physeq_rare
+```
+
+heatmap:
+
+```{r, fig.width= 20, fig.height= 14}
+physeq_rare %>%
+  subset_samples(Treatment == "STRAIN" | Model == "Human" & Reactor %!in% c("negative", "positive"))  %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "compositional",
+                          group_by = "SampleID",
+                          facet_by = c("Fermentation", "Enrichment",  "Reactor_Treatment"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 100) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~ Fermentation + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       labels = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```  
+same at the genus level
+
+
+```{r, fig.width= 20, fig.height= 10}
+physeq_rare %>%
+  subset_samples(Treatment == "STRAIN" | Model == "Human" & Reactor %!in% c("negative", "positive"))  %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "compositional",
+                          group_by = "SampleID",
+                          facet_by = c("Fermentation", "Enrichment",  "Reactor_Treatment"),
+                          tax_aggregate = "Genus",
+                          tax_add = NULL,
+                          ntax  = 50) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~ Fermentation + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       labels = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```  
+
+same at the genus level
+
+
+```{r, fig.width= 20, fig.height= 10}
+physeq_rare %>%
+  subset_samples(Treatment == "STRAIN" | Experiment == "Continuous")  %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "compositional",
+                          group_by = "SampleID",
+                          facet_by = c("Model", "Fermentation", "Reactor_Treatment"),
+                          tax_aggregate = "Genus",
+                          tax_add = NULL,
+                          ntax  = 50) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~Model + Fermentation + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       labels = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```  
+
+```{r, fig.width= 30, fig.height= 20}
+physeq_rare %>%
+  subset_samples(Treatment == "STRAIN" | Experiment == "Continuous")  %>%
+  # subset_samples(Experiment == "CCUG59168" |  Experiment ==  "HV292.1" | Experiment ==  "Cecum" |  Experiment ==  "Continuous" & Reactor %in% c("IR1", "CR")) %>%
+  # rarefy_even_depth(sample.size = 2574,rngseed = 123) %>%
+  phyloseq_ampvis_heatmap(transform = "compositional",
+                          group_by = "SampleID",
+                          facet_by = c("Model", "Fermentation", "Reactor_Treatment"),
+                          tax_aggregate = "Species",
+                          tax_add = NULL,
+                          ntax  = 200) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~Model + Fermentation + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       labels = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```
+
+```{r}
+sessionInfo()
+```

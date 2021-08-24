@@ -1,8 +1,11 @@
 ---
 title: "metadata_import"
-author: "Sneha"
-date: "14/10/2020"
-output: html_document
+author: "Sneha & FC"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  html_document: 
+    toc: yes
+    keep_md: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -16,6 +19,7 @@ library(phyloseq)
 library(readxl)
 library(here)
 ```
+
 
 First import the phyloseq object.
 ```{r} 
@@ -97,6 +101,25 @@ sample_data(physeq) <- metadata
 
 ```
 
+
+Add metabolite data to sample data of phyloseq object
+```{r}
+
+here("data/raw/hplc Fermentation (Salvato automaticamente).xlsx") %>%
+      readxl::read_xlsx(sheet = "All total") -> metabolites
+
+
+physeq@sam_data %>%
+  data.frame() %>%
+  rownames_to_column('id') %>%
+  left_join(
+    metabolites,
+    by = c("Sample_description" = "Sample_Id")) %>%
+  column_to_rownames('id') %>% 
+  sample_data() -> physeq@sam_data
+```
+
+
 Creating factor variables out of all the metadata columns so that the levels are in the order we specify. 
 
 ```{r}
@@ -142,7 +165,7 @@ Saving the new updated physeq object
 out.path <- "data/processed"
 physeq_update <- physeq
 
-saveRDS(physeq_update,file = file.path(here::here(out.path),"physeq_update_11_1_21.RDS"))
+saveRDS(physeq_update,file = file.path(here::here(out.path),"physeq_update_16S_chicken_08-06-21.RDS"))
 
 ```
 

@@ -1,0 +1,267 @@
+---
+title: "SqmAnalysis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+rm(list = ls()) # remove all the object before starting
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load required packages
+
+```{r,packages,message=FALSE}
+options(connectionObserver = NULL)
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+
+# sudo R CMD INSTALL ~/miniconda3/envs/SqueezeMeta210601/lib/SQMtools
+# sudo R CMD INSTALL ~/miniconda3/envs/SqueezeMeta210601/lib/R/library/SQMtools/ 
+# sudo R CMD INSTALL /Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/SQMtools/
+# In my cas I had to specify the following. You should comment it and use the code above.
+# library('SQMtools', lib.loc = "/Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/")
+# easypackages::libraries(list.files("/Users/fconstan/miniconda3/envs/SqueezeMeta210601/lib/R/library/"))
+# library('SQMtools'); packageVersion("SQMtools")
+library('dplyr')
+library("tidyverse")
+library("ggplot2")
+library("grid")
+library("ggpubr")
+library("vegan")
+library("readxl")
+library("reshape2")
+library("RColorBrewer")
+# library("org.Hs.eg.db")
+```
+
+## Load SQM Project
+
+Note: You need the newest version of sqmtools.
+If you transferred your files from the euler cluster to your local computer, you need to change the installation path in your SqueezeMeta_conf.pl file 
+
+```{r, warning=FALSE}
+#chicken = loadSQM('/run/user/1000/gvfs/afp-volume:host=apollo.local,user=hannah,volume=hannah-chicken/SqueezeChicken', engine = 'data.table')
+#saveRDS(chicken, file = "chicken_SQM_funiden90.rds")
+pathSQM <- "data/raw/SQM/chicken_SQM.rds"
+
+pathSQM %>%
+  here::here() %>% 
+  readRDS() -> sqm
+```
+
+
+```{r, warning=FALSE}
+sqm$orfs$table %>%
+  data.frame()  -> orf_df
+  # filter(CARD_DB != "" ) %>%
+  # distinct(CARD_DB, .keep_all = TRUE) 
+ 
+
+orf_df %>% 
+  dim()
+```
+
+1 634 985 genes same as in SQM stats.
+
+based on CARD, contigs megahit_8588|megahit_219391 harbour vanA cluster and blaCTX, respectively
+
+```{r, warning=FALSE}
+sqm$orfs$tpm %>% #[1:10,1:10]
+  data.frame() %>% 
+  cbind(sqm$orfs$table) %>% #[1:10,1:10]
+  rownames_to_column("Contig.ID") %>% 
+  separate(Contig.ID, into = c("assembler","Contig_ID", "gene_id"), sep = "_", remove = FALSE) %>% 
+  mutate(Contig_ID = paste(assembler,Contig_ID, sep = "_")) -> ord_df
+```	
+
+```{r, warning=FALSE}
+ord_df %>% 
+  filter(grepl('\\bmegahit_8588\\b|\\bmegahit_219391\\b', Contig_ID)) -> ord_df_fil #%>%  
+
+ord_df_fil %>% 
+  DT::datatable()
+```	
+
+```{r, warning=FALSE}
+sqm$contigs$seqs %>% 
+  as.data.frame() %>% 
+  rownames_to_column("Contig.ID") %>% 
+  filter(grepl('\\bmegahit_8588\\b|\\bmegahit_219391\\b', Contig.ID)) %>%  
+  column_to_rownames('Contig.ID') -> seq_contig
+
+seq_contig
+```
+
+```{r, warning=FALSE}
+library(Biostrings)
+seq = seq_contig$.
+names(seq) = seq_contig %>%  rownames()
+dna = DNAStringSet(seq)
+
+dna
+
+Biostrings::writeXStringSet(dna, 
+                            here::here("tmp/contig_plasmids.fasta"))
+```
+
+# gene TPM in those contigs:
+
+```{r, warning=FALSE, fig.width=26, fig.height=10}
+ord_df_fil %>%
+  pivot_longer(cols = `TPM D1`:`TPM D9`,
+               names_to = "sample", values_to = "tmp") %>%
+  select(Contig_ID, Contig.ID,gene_id,`Length NT`:PFAM, sample, tmp) %>% 
+  mutate(sample = str_remove(sample, "TPM ")) %>% 
+  left_join(here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>% 
+              read_tsv() %>% filter(metagenomic_sample_name %!in% NA) ,
+            by = c("sample" = "metagenomic_sample_name")) -> to_plot
+
+to_plot %>% 
+   # filter(sample != "D43") %>%
+   mutate(tmp = na_if(tmp, 0)) %>%
+  mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+  ggplot(mapping = aes(x = as.factor(Day_of_Treatment),
+                       y = paste0(`Contig.ID`, "_", `Gene name`, "_",COGFUN, "_", KEGGFUN, "_", PFAM) ,
+                      fill = tmp,
+  )) +
+  facet_grid(Contig_ID ~ as.factor(Reactor_Treatment), scales = "free", space = "free", drop = TRUE) +
+  geom_tile() + theme_bw() + #-> plot
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::sqrt_trans()) + #,
+                       # trans =  scales::pseudo_log_trans(sigma = 1)) + #,
+                       # breaks = c(1, 10, 50, 100, 500, 1000, 1500, 2100), labels = c(1, 10, 50, 100, 500, 1000, 1500, 2100),
+                       # limits = c(0, 2100)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> plot
+
+plot
+```
+```{r, warning=FALSE, fig.width=18, fig.height=8}
+ord_df_fil %>%
+  pivot_longer(cols = `TPM D1`:`TPM D9`,
+               names_to = "sample", values_to = "tmp") %>%
+  select(Contig_ID, Contig.ID,gene_id,`Length NT`:PFAM, sample, tmp) %>% 
+  mutate(sample = str_remove(sample, "TPM ")) %>% 
+  left_join(here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>% 
+              read_tsv() %>% filter(metagenomic_sample_name %!in% NA) ,
+            by = c("sample" = "metagenomic_sample_name")) -> to_plot
+
+to_plot %>% 
+   # filter(sample != "D43") %>%
+   mutate(tmp = na_if(tmp, 0)) %>%
+  mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+  ggplot(mapping = aes(x = as.factor(Day_of_Treatment),
+                       y = paste0(`Contig.ID`, "_",COGFUN) ,
+                      fill = tmp,
+  )) +
+  facet_grid(Contig_ID ~ as.factor(Reactor_Treatment), scales = "free", space = "free", drop = TRUE) +
+  geom_tile() + theme_bw() + #-> plot
+  scale_fill_viridis_c(name = "tmp",
+                       na.value = "transparent", trans = scales::sqrt_trans()) + #,
+                       # trans =  scales::pseudo_log_trans(sigma = 1)) + #,
+                       # breaks = c(1, 10, 50, 100, 500, 1000, 1500, 2100), labels = c(1, 10, 50, 100, 500, 1000, 1500, 2100),
+                       # limits = c(0, 2100)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> plot
+
+plot
+```
+# contig TPM and cov:
+
+```{r, warning=FALSE}
+sqm$contigs$tpm %>% #
+  data.frame() %>% 
+  cbind(sqm$contig$table) %>% #[1:10,1:10]
+  rownames_to_column("Contig.ID") %>% 
+  select(-D1:-D9) -> cont_df
+
+```	
+
+```{r, warning=FALSE}
+cont_df %>% 
+  filter(grepl('\\bmegahit_8588\\b|\\bmegahit_219391\\b', Contig.ID)) -> cont_df_fil #%>%  
+
+cont_df_fil %>% 
+  DT::datatable()
+```	
+
+
+```{r, warning=FALSE}
+cont_df_fil %>%
+  select(starts_with("Coverage D"),  Contig.ID:`Bin ID`) %>% 
+  pivot_longer(cols = `Coverage D1`:`Coverage D9`,
+               names_to = "sample", values_to = "Coverage") %>%
+  mutate(sample = str_remove(sample, "Coverage ")) %>% 
+  left_join(here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>% 
+              read_tsv() %>% filter(metagenomic_sample_name %!in% NA) ,
+            by = c("sample" = "metagenomic_sample_name")) %>% 
+    select(Length, Contig.ID ,Tax, Disparity, `Num genes`, sample, Coverage, Reactor_Treatment, Day_of_Treatment) -> to_plot
+
+
+to_plot %>% 
+    DT::datatable()
+```
+
+```{r, warning=FALSE}
+
+to_plot %>% 
+   # filter(sample != "D43") %>%
+  mutate(Coverage = na_if(Coverage, 0)) %>%
+  # mutate(Coverage = as.double(Coverage)) %>%
+  mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+  ggplot(mapping = aes(x = as.factor(Day_of_Treatment),
+                       y = paste0(`Contig.ID`, "_",Length) ,
+                     fill = Coverage,
+  )) +
+  facet_grid(Contig.ID ~ as.factor(Reactor_Treatment), scales = "free", space = "free", drop = TRUE) +
+  geom_tile() + theme_bw() + #-> plot
+  scale_fill_viridis_c(name = "Mean Coverage",
+  na.value = "transparent", trans = scales::sqrt_trans(), #)  +#, #,
+  #                      # trans =  scales::pseudo_log_trans(sigma = 1)) + #,
+                       breaks = c(1, 2, 5, 10, 50, 100, 200, 400), labels =  c(1, 2, 5, 10, 50, 100, 200, 400),
+                       limits = c(0, 400)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> plot
+
+plot
+```
+
+```{r, warning=FALSE}
+cont_df_fil %>%
+  select(starts_with("Raw read count D"),  Contig.ID:`Bin ID`) %>% 
+  pivot_longer(cols = `Raw read count D1`:`Raw read count D9`,
+               names_to = "sample", values_to = "Raw read count") %>%
+  mutate(sample = str_remove(sample, "Raw read count ")) %>% 
+  left_join(here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>% 
+              read_tsv() %>% filter(metagenomic_sample_name %!in% NA) ,
+            by = c("sample" = "metagenomic_sample_name")) %>% 
+    select(Length, Contig.ID ,Tax, Disparity, `Num genes`, sample, `Raw read count`, Reactor_Treatment, Day_of_Treatment) -> to_plot
+
+to_plot %>% 
+    DT::datatable()
+```
+
+```{r, warning=FALSE}
+
+to_plot %>% 
+   # filter(sample != "D43") %>%
+   mutate(`Raw read count` = na_if(`Raw read count`, 0)) %>%
+  mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+  ggplot(mapping = aes(x = as.factor(Day_of_Treatment),
+                       y = paste0(`Contig.ID`, "_",Length) ,
+                     fill = `Raw read count`,
+  )) +
+  facet_grid(Contig.ID ~ as.factor(Reactor_Treatment), scales = "free", space = "free", drop = TRUE) +
+  geom_tile() + theme_bw() + #-> plot
+  scale_fill_viridis_c(name = "Raw read count",
+  na.value = "transparent", trans = scales::sqrt_trans())  +#, #,
+  #                      # trans =  scales::pseudo_log_trans(sigma = 1)) + #,
+  #                      breaks = c(1, 10, 50, 1000, 5000, 100000, 150000, 250000), labels =  c(1, 10, 50, 1000, 5000, 100000, 150000, 250000),
+  #                      limits = c(0, 250000)) + #need to make sure that we include max value of tpm as upper limit
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> plot
+
+plot
+```
+
+
+```{r}
+sessionInfo()
+```

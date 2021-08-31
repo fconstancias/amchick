@@ -56,6 +56,8 @@ physeq_meta
 ```
 
 ```{r}
+source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+
 physeq_meta %>% 
   add_phylogeny_to_phyloseq() %>% 
   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_meta.RDS"))

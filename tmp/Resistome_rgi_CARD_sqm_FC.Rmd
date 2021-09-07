@@ -21,6 +21,7 @@ library(phyloseq)
 library(speedyseq)
 library(ggrepel)
 library(here)
+library(gridExtra)
 options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
 #this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
 ```
@@ -52,6 +53,9 @@ df %>%
   head() %>% 
   DT::datatable()
 ```
+
+
+
 ```{r}
 ps = "data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv"
   
@@ -63,9 +67,11 @@ ps %>%
 meta %>% 
   head() %>% 
   DT::datatable()
+
+meta 
 ```
 
-# Filtering:
+Filtering:
 
 ```{r}
 type = c("protein homolog model")
@@ -96,89 +102,96 @@ fil_df %>%
 
 fil_df %>% 
   write_tsv(here::here("tmp/rgi_card_table.tsv"))
+
+fil_df
 ```
 
-# heatmap with empty
-```{r, fig.height=12, fig.width=10}
-fil_df %>% 
-  pivot_longer(cols = `TPM D1`:`TPM D9`,
-               names_to = "sample", values_to = "tmp") %>%   
-  mutate(sample = str_remove(sample, "TPM ")) %>% 
-  left_join(meta %>% 
-              select(raw_metagenomic_pairs, metagenomic_sample_name,
-                     Treatment, Day_of_Treatment, Fermentation, Reactor_Treatment),
-            by = c("sample" = "metagenomic_sample_name")) %>% 
-   mutate(tmp = na_if(tmp, 0)) %>%
-  ggplot(mapping = aes(x = sample,
-                       y = Best_Hit_ARO ,
-                       fill = tmp, color = tmp,
-  )) +
-  # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
-  facet_grid(Drug.Class ~ Reactor_Treatment + Day_of_Treatment, scales = "free", space = "free", drop = TRUE) +
-  geom_tile()
 
-```
 
 ```{r, fig.height=18, fig.width=16}
-fil_df %>% 
+plot.df <- fil_df %>% 
   pivot_longer(cols = `TPM D1`:`TPM D9`,
-               names_to = "sample", values_to = "tmp") %>%   
+               names_to = "sample", values_to = "TPM") %>%   
   mutate(sample = str_remove(sample, "TPM ")) %>% 
   left_join(meta %>% 
               select(raw_metagenomic_pairs, metagenomic_sample_name,
                      Treatment, Day_of_Treatment, Fermentation, Reactor_Treatment),
             by = c("sample" = "metagenomic_sample_name")) %>% 
-  select(Day_of_Treatment, Best_Hit_ARO, tmp, Drug.Class, Reactor_Treatment, ORF_ID) %>% 
+  select(Day_of_Treatment, Best_Hit_ARO, TPM, Drug.Class, Reactor_Treatment, ORF_ID) %>% 
   mutate(Day_of_Treatment = as.factor(Day_of_Treatment)) %>% 
-   mutate(tmp = na_if(tmp, 0)) %>%
-    mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) %>% 
+   mutate(TPM = na_if(TPM, 0)) %>%
+    mutate(Reactor_Treatment = fct_relevel(Reactor_Treatment, c("DONOR"))) 
+
+plot.df$Drug.Class <- str_remove_all(plot.df$Drug.Class," antibiotic")
+```
+
+Split drug classes containing multiple agents into separate drug classes. For example the drug class "cephalosporin; penam" should be split into "cephalosporin" and "penam" and genes coming under "cephalosporin; penam" should appear both in drug.class "cephalosporin" and "penam". 
+
+```{r}
+
+plot.df.sep <- separate_rows(plot.df, Drug.Class,sep = '; ',convert = TRUE)
+
+
+```
+
+Just in case we need abbreviations for drug class labels. 
+
+```{r, include=FALSE}
+drug_class_labels<- c("AcDy; Dis and IntDye","AMC","AMG","AMG; AMC","AMG; CEPSP; CEPMY; PENAM","CARPEN; CEPSP; PENAM","CEPSP","CEPSP; PENAM","DAP","FQ","FQ; CEPSP; CEPMY;PENAM","FQ; CEPSP; GLYCY; PENAM; TET; RIF; PHCOL; TRI","FQ; CEPSP; GLYCY; PENAM; TET; RIF; PHCOL; TRI", "FQ; LIN; NUC; AcDy; PHCOL; Dis and IntDye","FQ; MONO; CARPEN; CEPSP; GLYCY; CEPMY; PENAM; TET; RIF; PHCOL; TRI; PENEM","FQ; TET","FOS","GLYPEP","LIN","MAC","MAC; AcDy; Dis and IntDye","MAC; AMC","MAC; FQ","MAC; FQ; AMG; CARPEN; CEPSP; GLYCY; CEPMY; PENAM; TET; PEP; AMC; RIF; PHCOL; TRI; PENEM","MAC; FQ; CEPSP; CEPMY; PENAM; TET","MAC; FQ; PENAM","MAC; FQ; PENAM; TET","MAC; FQ; RIF","MAC; LIN; STRPGR", "MONO; CEPSP; PENAM; PENEM", "NI","NUC","NUC; AcDy; Dis and IntDye","PEP","PHCOL","SUL","TET","TET; BenzChl; RHO")
+
+drug_class_table <- data.frame(Drug.Class = levels(factor(plot.df$Drug.Class)),
+                               Drug.Class.Abbreviations = drug_class_labels)
+```
+
+Make the heatmap. 
+```{r, fig.height=18, fig.width=16}
+#convert drug class ino factors
+plot.df.sep$Drug.Class <- factor(plot.df.sep$Drug.Class
+                             #, labels = drug_class_labels
+                             )
+
+
+plot.df.sep %>% 
   ggplot(mapping = aes(x = Day_of_Treatment,
                        y = Best_Hit_ARO ,
-                       fill = tmp,
+                       fill = TPM,
   )) +
   # facet_grid(. ~ Reactor_Treatment,  scales = "free", space = "free", drop = TRUE) +
-  facet_grid(Drug.Class ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE) +
+  facet_grid(Drug.Class ~ Reactor_Treatment, scales = "free", space = "free", drop = TRUE,labeller = labeller(Drug.Class = label_wrap_gen(width = 15))) +
+  #we adjust the vertical labels such that it is printed correctly. 
   geom_tile() +
   theme_bw() -> perma_bbuble
 
-perma_bbuble
 ```
 
-```{r, fig.height=18, fig.width=16}
+
+Make the heatmap pretty 
+```{r, fig.height=30, fig.width=14}
 perma_bbuble +
-  scale_fill_viridis_c(name = "tmp",
+  scale_fill_viridis_c(name = "TPM",
                        na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
                        # trans =  scales::pseudo_log_trans(sigma = 1),
                        breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
                        limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+        strip.text.x = element_text(size=8),
+        #change the size of the label and the angle so the text is printed horizontally
+        strip.text.y = element_text(size = 7,angle=0)) -> perma_bbuble
 
 perma_bbuble
 ```
 
-```{r, fig.height=16, fig.width=12}
-perma_bbuble +
-  scale_fill_viridis_c(name = "tmp",
-                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
-                       # trans =  scales::pseudo_log_trans(sigma = 1),
-                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
-                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
 
-perma_bbuble
+Store as pdf. 
+```{r}
+pdf(here("output","metagenomics","exploratory","resistome_heatmap_chicken.pdf"),width=20, height=30)
+  perma_bbuble
+dev.off()
 ```
 
-```{r, fig.height=12, fig.width=10}
-perma_bbuble +
-  scale_fill_viridis_c(name = "tmp",
-                       na.value = "transparent", trans = scales::pseudo_log_trans(sigma = 0.1),
-                       # trans =  scales::pseudo_log_trans(sigma = 1),
-                       breaks = c(1, 10, 50, 100, 400), labels = c(1, 10, 50, 100, 400),
-                       limits = c(0, 500)) + #need to make sure that we include max value of tpm as upper limit
-  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) -> perma_bbuble
 
-perma_bbuble
-```
+
+
 
 ```{r}
 sessionInfo()

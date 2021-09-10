@@ -49,7 +49,6 @@ ps %>%
   phyloseq_get_strains_fast() %>%
   phyloseq_remove_chloro_mitho() -> physeq
 
-
 ```
 
 We want only continuous samples.
@@ -63,6 +62,8 @@ Rarefying the data
 ```{r message = FALSE}
 ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_rare
 ```
+
+## Testing
 Taking only the unenriched samples, getting rid of dubious sample, and taking just one reactor say TR1 for easy working . 
 ```{r}
 ps_rare %>%
@@ -223,6 +224,7 @@ res<-pairwise.wilcox.test(asv_toy$Abundances,asv_toy$Period,p.adj="BH")
 res$p.value
 ```
 
+## On all the reactors
 
 Taking only the unenriched samples, getting rid of dubious sample.
 

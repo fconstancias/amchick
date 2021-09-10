@@ -1,0 +1,76 @@
+---
+title: "Alpha diversity across treatment periods"
+author: "Sneha Sundar"
+date: "`r format(Sys.time(), "%a %b %d %X %Y")`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Load required packages
+```{r, message=FALSE, error=FALSE}
+library(tidyverse)
+library(phyloseq)
+library(speedyseq)
+library(ampvis2)
+library(microbiome)
+library(here)
+
+options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
+#this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
+```
+
+### Load required functions
+```{r}
+
+'%!in%' <- function(x,y)!('%in%'(x,y))
+
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_taxa_tests.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")`
+```
+
+
+### Load phyloseq object
+
+```{r}
+ps = "data/processed/physeq_update_11_1_21.RDS"
+
+ps %>% 
+  here::here() %>%
+  readRDS() %>%
+  phyloseq_get_strains_fast() %>%
+  phyloseq_remove_chloro_mitho() -> physeq
+
+```
+
+
+### We want only continuous samples that are not IR2
+```{r}
+physeq %>% 
+  subset_samples(Experiment == "Continuous") %>% 
+  subset_samples(Reactor != "IR2") -> ps_polyFermS
+```
+
+
+### Rarefying the data
+```{r message = FALSE}
+ps_polyFermS %>%  rarefy_even_depth(sample.size = 4576,rngseed = 123) -> ps_rare
+```
+
+### Filtering
+
+Taking only the unenriched samples, getting rid of dubious sample.
+
+```{r}
+ps_rare %>%
+  subset_samples(Enrichment == "NotEnriched") %>%
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_rare
+```
+
+
+###

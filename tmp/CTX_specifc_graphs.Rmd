@@ -151,7 +151,7 @@ ps_PolyFermS_ctx_rare_clean %>%
 Alpha diversity metrics we would like to calculate
 
 ```{r}
-measures_alpha <- c("Observed","Chao1","diversity_shannon","diversity_inverse_simpson")
+measures_alpha <- c("Observed")#,"Chao1","diversity_shannon","diversity_inverse_simpson")
 ```
 
 #### Alpha diversity measures over time

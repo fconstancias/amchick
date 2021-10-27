@@ -1,7 +1,7 @@
 ---
 title: "Vacomycin specific graphs"
 author: "Sneha Sundar"
-date: "March 02, 2021"
+date: "June 10, 2021"
 output: 
   html_document: 
     toc: yes
@@ -158,7 +158,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## 7 samples removedbecause they contained fewer reads than `sample.size`.
+## 5 samples removedbecause they contained fewer reads than `sample.size`.
 ```
 
 ```
@@ -166,7 +166,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## CR-40-S166IR1-40-S197IR1-41-S187IR1-69-S198TR4-18-S200
+## CR-40-S166CR-52-S196IR1-69-S198TR4-18-S200TR6-13-S164
 ```
 
 ```
@@ -174,7 +174,7 @@ ps_PolyFermS_van %>%
 ```
 
 ```
-## 83OTUs were removed because they are no longer 
+## 118OTUs were removed because they are no longer 
 ## present in any sample after random subsampling
 ```
 
@@ -274,8 +274,6 @@ ps_polyFermS_van_rare_clean  %>%
 ```
 
 ```
-## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
-
 ## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf
 
 ## Warning in min(x, na.rm = T): no non-missing arguments to min; returning Inf

@@ -1,5 +1,5 @@
 ---
-title: "NRP72 -metadata - humann"
+title: "NRP72 -metadata - humann - chiken "
 author: "Florentin Constancias"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
@@ -10,6 +10,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+rm(list = ls())
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
@@ -28,7 +29,7 @@ options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issue
 # Import phyloseq object
 
 ```{r}
-ps = "data/raw/metabarcoding/ps_silva_dada2_humanonly.RDS"
+ps = "data/raw/metabarcoding/ps_silva_dada2_human-chicken.RDS"
 
 ps %>% 
   here::here() %>%
@@ -37,32 +38,111 @@ ps %>%
 physeq$physeq -> physeq
 
 physeq
+
+```
+
+```{r}
+physeq %>% 
+  sample_names() %>% 
+  sort() %>% 
+  head()
+
 ```
 
 
+```{r}
+here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv() %>% 
+  pull("sample") %>% 
+  sort() %>% 
+  head()
 
+```
 
-```{r, eval=FALSE}
+```{r, eval=TRUE}
 source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
 
 # ps@sam_data = NULL
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/humann_track_analysis.xlsx") %>%
-  readxl::read_xlsx(), sample_column = "sample") -> physeq_meta
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv(), sample_column = "sample") -> physeq_meta
 
-physeq_meta
+
+
+
+physeq;physeq_meta
+
+```
+
+
+
+```{r, eval=TRUE}
+source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+
+# ps@sam_data = NULL
+
+physeq %>%
+  physeq_add_metadata(physeq = .,
+                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                        readr::read_tsv() %>% 
+    mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment),
+    Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`),
+       paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+  , sample_column = "sample") -> physeq_meta
+
+
+# 
+# meta %>% 
+#     mutate(Reactor_Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Reactor_Treatment, `Antibiotic_mg/mL`), Reactor_Treatment)
+#     Treatment_Dose = ifelse(!is.na(`Antibiotic_mg/mL`), 
+#        paste0(Treatment, `Antibiotic_mg/mL`), Reactor_Treatment))
+
+# ifelse(!is.na(sample_data(physeq_meta)$Antibiotic_mg.mL), 
+#        sample_data(physeq_meta)$Antibiotic_mg.mL, "") %>% 
+# mutate(gradebook, Pass.Fail = ifelse(grade > 60, "Pass", "Fail"))
+
+
+
+physeq;physeq_meta
+
+physeq_meta %>% 
+  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"))
+```
+
+600 samples initially and 471 with metadata ????
+
+```{r}
+intersect(
+  sample_names(physeq_meta),
+  sample_names(physeq)) %>% 
+  length()
 ```
 
 ```{r}
-source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
+difference <- function(x, y) {
+c(setdiff(x, y), setdiff(y, x))
+}
 
-physeq_meta %>% 
-  add_phylogeny_to_phyloseq() %>% 
-  saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_meta.RDS"))
+difference(
+  sample_names(physeq),
+  sample_names(physeq_meta))
+```
+
+Above missing from the metadata but present in the initiall phyloseq object.
+
+
+
+```{r}
+# physeq_meta %>% 
+#   add_phylogeny_to_phyloseq(export = FALSE) %>% 
+#   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_humanonly_phylo_meta.RDS"))
 ```
 
 ```{r}
 sessionInfo()
 ```
+

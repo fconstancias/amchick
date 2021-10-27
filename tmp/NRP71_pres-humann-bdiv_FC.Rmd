@@ -45,22 +45,21 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 # Import phyloseq object
 
 ```{r}
-ps = "data/processed/physeq_update_16S_chicken_08-06-21.RDS"
-
+ps = "data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"
 
 ps %>% 
   here::here() %>%
   readRDS() %>%
   phyloseq_get_strains_fast() %>% 
   filter_taxa(function(x) sum(x > 0) > 0, TRUE) %>% 
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) %>% 
-  subset_samples(Experiment == "Continuous") %>% 
-  subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Paul %!in% c("Paul")) %>% 
-  subset_samples(Reactor_Treatment != "IR1_UNTREATED") %>% 
-  subset_samples(Reactor_Treatment != "IR2_UNTREATED") %>% 
-  subset_samples(Day_from_Inoculum >= 27)  -> physeq
+  subset_samples(Enrichment == "NotEnriched") %>% 
+  subset_samples(Model == "Human")  %>%
+  subset_samples(Treatment %!in% c("positive", "negative", "DONOR", "CCUG59168", "HV292.1", "STRAIN")) -> physeq
 
+physeq %>% 
+  sample_data() %>% 
+  data.frame() %>% 
+  DT::datatable()
 ```
 
 # Rarefaction:
@@ -83,23 +82,23 @@ physeq_rare %>%
 ```{r}
 physeq_rare  %>%
   phyloseq_plot_bdiv(bdiv_list,
-                     m = "CoDa",
+                     m = "CoDa", # with this potion I am generating CLR transformed OTU table
                      seed = 123) -> coda
 
-bdiv_list$coda <- coda$physeq_clr %>% phyloseq::distance(method = "euclidean")
+bdiv_list$coda <- coda$physeq_clr %>% phyloseq::distance(method = "euclidean")  # Aitchinson distance wich claim to be superior to the other ones for compositional data.
 ```
 
 ```{r,fig.align="center", warning = FALSE, message = FALSE, results = TRUE}
 coda$PCA$layers[[1]] = NULL
 
 coda$PCA + geom_point(size=2,
-                      aes(color = Reactor_Treatment, 
-                          fill = Reactor_Treatment,
+                      aes(color =Treatment, 
+                          fill = Treatment,
                           shape = NULL,
                           alpha = Day_of_Treatment)) + 
   theme_light() +
   geom_path(arrow = arrow(type = "open", angle = 30, length = unit(0.15, "inches")),
-            size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Reactor_Treatment), show.legend = FALSE) +
+            size = 0.05, linetype = "dashed", inherit.aes = TRUE, aes(group=Reactor_Treatment, color = Treatment), show.legend = FALSE) +
   scale_alpha_continuous(range=c( 0.9, 0.3)) + scale_color_viridis_d(na.value = "black") + 
   scale_fill_viridis_d(na.value = "black") + 
   # scale_shape_manual(values = c(8, 21, 22, 23, 24, 16, 15, 18, 17)) + 
@@ -108,49 +107,74 @@ coda$PCA + geom_point(size=2,
 
 pca_atchi
 
-pca_atchi %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+
+plotly::ggplotly(pca_atchi)
+# pca_atchi %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
-
+This is the fonction of interest
 ```{r, message = FALSE, warnings = FALSE}
 phyloseq_add_taxa_vector(dist =  bdiv_list$coda,
                          phyloseq = physeq_rare,
                          figure_ord = pca_atchi,
-                         top_r = 16,
+                         pval_cutoff = 0.05,
+                         top_r = 16, # top features tp display(strain, or depending on what you specified based on correlation r value)
                          taxrank_glom = "Strain",
-                         tax_rank_plot = "Strain",
+                         tax_rank_plot = "Strain"
 ) -> out
-
-out$plot  %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
+
+Add the vectors to the ordination plot
 ```{r, message = FALSE, warnings = FALSE}
-out$signenvfit %>%  
+out$plot
+```
+Get the raw table of taxa and correlation with the ordination: 
+```{r, message = FALSE, warnings = FALSE}
+out$envfit %>%
   DT::datatable()
 ```
 
+You could then filter that table and use the ASV id to generate a heatmap of only the significant features:
 ```{r, message = FALSE, warnings = FALSE}
-phyloseq_add_taxa_vector(dist =  bdiv_list$coda,
-                         phyloseq = physeq_rare,
-                         figure_ord = pca_atchi,
-                         top_r = 16,
-                         taxrank_glom = "Genus",
-                         tax_rank_plot = "Genus"
-) -> out
+out$envfit %>%
+  filter(pval <= 0.05) %>% 
+  pull(id) -> ASV_envit
 
-out$plot  %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+
 ```
 
-```{r, message = FALSE, warnings = FALSE}
-out$signenvfit %>%  
-  DT::datatable()
-```
+
+```{r, fig.width= 20, fig.height= 10}
+physeq_rare %>% 
+prune_taxa(x = ., taxa = ASV_envit) %>%
+  phyloseq_ampvis_heatmap(transform = FALSE,
+                          group_by = "SampleID",
+                          facet_by = c("Model", "Fermentation", "Reactor_Treatment"),
+                          tax_aggregate = "Genus",
+                          tax_add = NULL,
+                          ntax  = 50) -> p
+
+p$data %>% 
+  mutate(Abundance = na_if(Abundance, 0)) -> p$data 
+
+
+p + facet_grid( ~Model + Fermentation + Reactor_Treatment , scales = "free", space = "free") + 
+  scale_fill_viridis_c(breaks = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       labels = c(0,  0.01, 0.1, 0.2, 0.50, 0.75, 0.100), 
+                       trans = scales::pseudo_log_trans(sigma = 0.001),
+                       na.value = 'transparent') -> p2
+
+p2
+
+
+# p2 %>% 
+  # export::graph2ppt(append = TRUE,
+  #                   file = file.path(here::here("data/processed/figures_NRP72")))
+```  
+
 ```{r, message = FALSE, warnings = FALSE}
 vegan::adonis(bdiv_list$coda  ~ get_variable(physeq_rare, "Reactor_Treatment") * 
                 get_variable(physeq_rare, "Day_of_Treatment"))$aov.tab %>% 
@@ -201,17 +225,17 @@ physeq_rare %>%
 dist_box_plot <- dist_box$plot
 
 dist_box_plot
-
-dist_box_plot %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+# 
+# dist_box_plot %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
 
 ```{r, message = FALSE, warnings = FALSE}
 plots %>%
   phyloseq_plot_ordinations_facet(color_group =  "Day_of_Treatment",
-                                  shape_group = "Reactor_Treatment")  -> plot_list
+                                  shape_group = "Treatment")  -> plot_list
 
 plot_list
 
@@ -260,7 +284,7 @@ phyloseq_plot_beta_div_wrt_timepoint(distances = c("coda", "bjaccard", "wjaccard
                                      timepoint = "fixed",
                                      group_var = "Reactor_Treatment",
                                      time_var = "Day_of_Treatment",
-                                     fixed_time = -1) -> t
+                                     fixed_time = -2) -> t
 tmp_plot <- t$bjaccard + facet_null() 
 
 tmp_plot$data %>% 
@@ -268,9 +292,9 @@ tmp_plot$data %>%
 
 tmp_plot_corrected 
 
-tmp_plot_corrected %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+# tmp_plot_corrected %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 
 
@@ -285,10 +309,10 @@ tmp_plot$data %>%
   correct_plot_x_continious(.) -> tmp_plot_corrected
 
 tmp_plot_corrected
-
-tmp_plot_corrected %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+# 
+# tmp_plot_corrected %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 ```
 ```{r, message = FALSE, warnings = FALSE}
 tmp_plot <- t$coda + facet_null()
@@ -296,11 +320,12 @@ tmp_plot <- t$coda + facet_null()
 tmp_plot$data %>% 
   correct_plot_x_continious(.) -> tmp_plot_corrected
 
-tmp_plot_corrected
-
 tmp_plot_corrected %>% 
-  export::graph2ppt(append = TRUE,
-                    file = file.path(here::here("data/processed/figures_NRP72")))
+  plotly::ggplotly()
+
+# tmp_plot_corrected %>% 
+#   export::graph2ppt(append = TRUE,
+#                     file = file.path(here::here("data/processed/figures_NRP72")))
 
 ```
 ```{r, message = FALSE, warnings = FALSE}

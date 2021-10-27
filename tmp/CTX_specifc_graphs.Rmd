@@ -115,27 +115,27 @@ physeq@sam_data %>%
 
 
 
-#### Take only vancomycin treated reactors
+#### Take only ctx treated reactors
 
 ```{r}
 physeq %>% 
   subset_samples(Experiment == "Continuous") %>% 
   subset_samples(Paul %!in% c("Paul")) %>%
-  subset_samples(Reactor %!in% c("IR2","TR4","TR5","TR6")) -> ps_PolyFermS_van
+  subset_samples(Reactor %!in% c("IR2","TR4","TR5","TR6")) -> ps_PolyFermS_ctx
 ```
 
 
 #### Rarefy and remove dubious samples (samples that appear to have been swapped)
 
 ```{r}
-ps_PolyFermS_van %>% 
+ps_PolyFermS_ctx %>% 
   rarefy_even_depth(sample.size = 4576,
-                    rngseed = 123) -> ps_polyFermS_van_rare
+                    rngseed = 123) -> ps_PolyFermS_ctx_rare
 
 
-ps_polyFermS_van_rare %>%
+ps_PolyFermS_ctx_rare %>%
   subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_polyFermS_van_rare_clean
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_ctx_rare_clean
 ```
 
 ### Alpha diversity graphs
@@ -143,7 +143,7 @@ ps_polyFermS_van_rare %>%
 #### Compute alpha diversity metrics on rarified data
 
 ```{r message = FALSE, warning = FALSE }
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_alphas(phylo = TRUE) -> alpha_df
 ```
 
@@ -210,7 +210,7 @@ out.alpha.2$plot +
 
 #### PCA plot
 ```{r}
-ps_polyFermS_van_rare_clean  %>%
+ps_PolyFermS_ctx_rare_clean  %>%
   phyloseq_plot_bdiv(bdiv_list,
                      m = "CoDa",
                      seed = 123) -> coda
@@ -240,11 +240,11 @@ coda_plot
 We are not rarefying here. We did remove the dubious samples though. 
 
 ```{r}
-ps_PolyFermS_van %>%
+ps_PolyFermS_ctx %>%
 subset_samples(Enrichment == "NotEnriched") %>%
-  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_van_clean
+  subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_PolyFermS_ctx_clean
 
-ps_PolyFermS_van_clean %>%
+ps_PolyFermS_ctx_clean %>%
   sample_data() %>%
   data.frame() -> df
 
@@ -287,8 +287,8 @@ df %>%
   dist(method= "euc") -> euc_met
 
 
-plot_ordination(ps_PolyFermS_van_clean,
-                ordination = phyloseq::ordinate(ps_PolyFermS_van_clean,
+plot_ordination(ps_PolyFermS_ctx_clean,
+                ordination = phyloseq::ordinate(ps_PolyFermS_ctx_clean,
                                       distance = euc_met, 
                                       method = "PCoA")) -> pca
 
@@ -322,7 +322,7 @@ measures_for_corr_plot = c("Total_SCFA_mM", "Acetat_mM", "Butyrat_mM", "Propiona
 Class level correlation
 
 ```{r fig.align="center", fig.height=10, fig.width=16, warning = FALSE, message = FALSE, results = FALSE}
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_correlate_taxa(log10 = TRUE, 
                           tax_glom = "Family",
                           grouping_column = "Reactor_Treatment", # grouping with fake group column will not subset any data.
@@ -338,7 +338,7 @@ results.class$plot +
 Strain level correlation
 
 ```{r warning= FALSE, message = FALSE}
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_correlate_taxa(log10 = TRUE, 
                           tax_glom = "Strain",
                           grouping_column = "Reactor_Treatment", # grouping with fake group column will not subset any data.
@@ -358,7 +358,7 @@ results.strain$plot +
 #### Heatmap of taxa abundances
 
 ```{r fig.height=3, fig.width=10 ,fig.align = "center", message = TRUE, warning= TRUE}
-ps_polyFermS_van_rare_clean %>%
+ps_PolyFermS_ctx_rare_clean %>%
   phyloseq_ampvis_heatmap(transform = "compositional",
                           group_by = "Day_from_Inoculum",
                           facet_by = c("Enrichment", "Phase", "Reactor", "Treatment", "Experiment", "Reactor_Treatment" ),

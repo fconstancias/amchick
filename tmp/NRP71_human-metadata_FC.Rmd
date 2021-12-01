@@ -51,7 +51,8 @@ physeq %>%
 
 
 ```{r}
-here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+# here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+here::here("data/raw/metabarcoding/25.11.2021_metadata_updated.tsv") %>%
                         readr::read_tsv() %>% 
   pull("sample") %>% 
   sort() %>% 
@@ -66,7 +67,7 @@ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/de
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                      metadata = here::here("data/raw/metabarcoding/25.11.2021_metadata_updated.tsv") %>%
                         readr::read_tsv(), sample_column = "sample") -> physeq_meta
 
 
@@ -108,7 +109,9 @@ physeq %>%
 
 
 physeq;physeq_meta
+```
 
+```{r}
 physeq_meta %>% 
   saveRDS(here::here("data/raw/metabarcoding/ps_silva_dada2_human_chicken_meta.RDS"))
 ```

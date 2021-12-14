@@ -89,6 +89,9 @@ ps %>%
   phyloseq_remove_chloro_mitho() -> physeq
 ```
 
+```{r}
+physeq %>% sample
+```
 
 
 #### Import metabolite data

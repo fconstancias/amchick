@@ -17,6 +17,7 @@ library(speedyseq)
 library(ampvis2)
 library(microbiome)
 library(here)
+library(ggpubr)
 
 options(getClass.msg=FALSE) # https://github.com/epurdom/clusterExperiment/issues/66
 #this fixes an error message that pops up because the class 'Annotated' is defined in two different packages
@@ -31,7 +32,7 @@ source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/p
 source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_normalisation.R")
 source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_alpha.R")
 source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_beta.R")
-source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")`
+source("https://raw.githubusercontent.com/fconstancias/DivComAnalyses/master/R/phyloseq_heatmap.R")
 ```
 
 
@@ -72,5 +73,126 @@ ps_rare %>%
   subset_samples(Sample_description %!in% c("TR5-15", "TR4-1")) -> ps_rare
 ```
 
+### Adding treatment period to the metadata
 
-###
+```{r}
+sam <- ps_rare %>% 
+  sample_data() %>% as.matrix() %>% as.data.frame() %>% 
+  mutate(Day_of_Treatment = as.numeric(Day_of_Treatment))
+
+
+sam <- sam %>%
+  mutate(
+    Period = case_when(
+      Day_of_Treatment == -2 | Day_of_Treatment == -3 | Day_of_Treatment == -6 | Day_of_Treatment == -7 ~ "pret",
+      Day_of_Treatment < 10 & Day_of_Treatment >= 0 ~ "t1",
+      Day_of_Treatment < 20 & Day_of_Treatment >= 10 ~ "t2",
+      Day_of_Treatment < 30 & Day_of_Treatment >= 20 ~ "t3",
+      Day_of_Treatment < 40 & Day_of_Treatment >= 30 ~ "t4",
+      Day_of_Treatment < 50 & Day_of_Treatment >= 40 ~ "t5",
+    )
+  )
+
+#remember you have na in the rows 
+
+
+```
+
+### Adding modified metadata to physeq object and removing the samples. 
+
+```{r}
+sample_data(ps_rare) <- sam
+
+ps_rare <- ps_rare %>% subset_samples(!is.na(Period))
+```
+
+### Compute alpha diversity metrics.
+
+```{r}
+ps_rare %>%
+  phyloseq_alphas(phylo = FALSE) -> alpha_df
+
+alpha_df
+```
+
+## CTX specific graphs
+
+```{r}
+ctx_alpha_df <- alpha_df %>% filter(Reactor %in% c("CR","TR1","TR2","TR3"))
+
+```
+
+
+
+
+
+```{r}
+ctx_shannon <- ggboxplot(ctx_alpha_df, x = "Period", y = "diversity_shannon", color = "Reactor_Treatment"
+          , add = "jitter")
+
+pdf(here("output","metabarcoding","exploratory","ctx_shannon.pdf"), width=10,height=6)
+  ctx_shannon
+dev.off()
+
+```
+
+```{r}
+ctx_obs <- ggboxplot(ctx_alpha_df, x = "Period", y = "Observed", color = "Reactor_Treatment"
+          , add = "jitter")
+
+pdf(here("output","metabarcoding","exploratory","ctx_obs.pdf"), width=10,height=6)
+  ctx_obs
+dev.off()
+```
+
+```{r}
+ctx_eveness <- ggboxplot(ctx_alpha_df, x = "Period", y = "evenness_pielou", color = "Reactor_Treatment"
+          , add = "jitter")
+
+pdf(here("output","metabarcoding","exploratory","ctx_eveness.pdf"), width=10,height=6)
+  ctx_eveness
+dev.off()
+```
+
+
+## VAN specific graphs
+
+```{r}
+van_alpha_df <- alpha_df %>% filter(Reactor %in% c("CR","TR4","TR5","TR6"))
+
+```
+
+
+
+
+
+```{r}
+van_shannon<-ggboxplot(van_alpha_df, x = "Period", y = "diversity_shannon", color = "Reactor_Treatment"
+          , add = "jitter")
+
+
+pdf(here("output","metabarcoding","exploratory","van_shannon.pdf"), width=10,height=6)
+  van_shannon
+dev.off()
+```
+
+```{r}
+van_obs <- ggboxplot(van_alpha_df, x = "Period", y = "Observed", color = "Reactor_Treatment"
+          , add = "jitter")
+
+
+pdf(here("output","metabarcoding","exploratory","van_obs.pdf"), width=10,height=6)
+  van_obs
+dev.off()
+```
+
+```{r}
+van_eveness <- ggboxplot(van_alpha_df, x = "Period", y = "evenness_pielou", color = "Reactor_Treatment"
+          , add = "jitter")
+
+pdf(here("output","metabarcoding","exploratory","van_eveness.pdf"), width=10,height=6)
+  van_eveness
+dev.off()
+
+```
+

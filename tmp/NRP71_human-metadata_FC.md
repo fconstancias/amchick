@@ -1,7 +1,7 @@
 ---
 title: "NRP72 -metadata - humann - chiken "
 author: "Florentin Constancias"
-date: "August 09, 2021"
+date: "December 01, 2021"
 output: 
   html_document: 
     toc: yes
@@ -63,7 +63,8 @@ physeq %>%
 
 
 ```r
-here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+# here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+here::here("data/raw/metabarcoding/25.11.2021_metadata_updated.tsv") %>%
                         readr::read_tsv() %>% 
   pull("sample") %>% 
   sort() %>% 
@@ -71,31 +72,20 @@ here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
 ```
 
 ```
-## 
+## Rows: 604 Columns: 61
+```
+
+```
 ## ── Column specification ────────────────────────────────────────────────────────
-## cols(
-##   .default = col_double(),
-##   sample = col_character(),
-##   Sample_description = col_character(),
-##   I7_Index_ID = col_character(),
-##   index = col_character(),
-##   I5_Index_ID = col_character(),
-##   index2 = col_character(),
-##   Description2 = col_character(),
-##   Experiment = col_character(),
-##   Reactor = col_character(),
-##   Treatment = col_character(),
-##   Enrichment = col_character(),
-##   Phase = col_character(),
-##   Treatment2 = col_character(),
-##   Date = col_character(),
-##   Paul = col_character(),
-##   Reactor_Treatment = col_character(),
-##   Model = col_character(),
-##   Antibiotic = col_character(),
-##   metagenomic_sample_name = col_character()
-## )
-## ℹ Use `spec()` for the full column specifications.
+## Delimiter: "\t"
+## chr (19): sample, Sample_description, I7_Index_ID, index, I5_Index_ID, index...
+## dbl (42): input, filtered, denoisedF, denoisedR, merged, tabled, filtered_pc...
+```
+
+```
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
 ```
@@ -111,36 +101,25 @@ source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/de
 
 physeq %>%
   physeq_add_metadata(physeq = .,
-                      metadata = here::here("data/raw/metabarcoding/merged_chicken_human_04.08.2021.tsv") %>%
+                      metadata = here::here("data/raw/metabarcoding/25.11.2021_metadata_updated.tsv") %>%
                         readr::read_tsv(), sample_column = "sample") -> physeq_meta
 ```
 
 ```
-## 
+## Rows: 604 Columns: 61
+```
+
+```
 ## ── Column specification ────────────────────────────────────────────────────────
-## cols(
-##   .default = col_double(),
-##   sample = col_character(),
-##   Sample_description = col_character(),
-##   I7_Index_ID = col_character(),
-##   index = col_character(),
-##   I5_Index_ID = col_character(),
-##   index2 = col_character(),
-##   Description2 = col_character(),
-##   Experiment = col_character(),
-##   Reactor = col_character(),
-##   Treatment = col_character(),
-##   Enrichment = col_character(),
-##   Phase = col_character(),
-##   Treatment2 = col_character(),
-##   Date = col_character(),
-##   Paul = col_character(),
-##   Reactor_Treatment = col_character(),
-##   Model = col_character(),
-##   Antibiotic = col_character(),
-##   metagenomic_sample_name = col_character()
-## )
-## ℹ Use `spec()` for the full column specifications.
+## Delimiter: "\t"
+## chr (19): sample, Sample_description, I7_Index_ID, index, I5_Index_ID, index...
+## dbl (42): input, filtered, denoisedF, denoisedR, merged, tabled, filtered_pc...
+```
+
+```
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
 ```r
@@ -166,6 +145,7 @@ physeq;physeq_meta
 
 
 
+
 ```r
 source("https://raw.githubusercontent.com/fconstancias/metabarcodingRpipeline/dev/scripts/functions_export_simplified.R")
 
@@ -183,31 +163,20 @@ physeq %>%
 ```
 
 ```
-## 
+## Rows: 600 Columns: 61
+```
+
+```
 ## ── Column specification ────────────────────────────────────────────────────────
-## cols(
-##   .default = col_double(),
-##   sample = col_character(),
-##   Sample_description = col_character(),
-##   I7_Index_ID = col_character(),
-##   index = col_character(),
-##   I5_Index_ID = col_character(),
-##   index2 = col_character(),
-##   Description2 = col_character(),
-##   Experiment = col_character(),
-##   Reactor = col_character(),
-##   Treatment = col_character(),
-##   Enrichment = col_character(),
-##   Phase = col_character(),
-##   Treatment2 = col_character(),
-##   Date = col_character(),
-##   Paul = col_character(),
-##   Reactor_Treatment = col_character(),
-##   Model = col_character(),
-##   Antibiotic = col_character(),
-##   metagenomic_sample_name = col_character()
-## )
-## ℹ Use `spec()` for the full column specifications.
+## Delimiter: "\t"
+## chr (19): sample, Sample_description, I7_Index_ID, index, I5_Index_ID, index...
+## dbl (42): input, filtered, denoisedF, denoisedR, merged, tabled, filtered_pc...
+```
+
+```
+## 
+## ℹ Use `spec()` to retrieve the full column specification for this data.
+## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 ```
 
 ```r
@@ -243,6 +212,7 @@ physeq;physeq_meta
 ## phy_tree()    Phylogenetic Tree: [ 1155 tips and 1154 internal nodes ]
 ## refseq()      DNAStringSet:      [ 1155 reference sequences ]
 ```
+
 
 ```r
 physeq_meta %>% 
@@ -295,13 +265,13 @@ sessionInfo()
 ```
 
 ```
-## R version 4.0.2 (2020-06-22)
+## R version 4.1.2 (2021-11-01)
 ## Platform: x86_64-apple-darwin17.0 (64-bit)
-## Running under: macOS High Sierra 10.13.6
+## Running under: macOS Mojave 10.14.6
 ## 
 ## Matrix products: default
-## BLAS:   /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRblas.dylib
-## LAPACK: /Library/Frameworks/R.framework/Versions/4.0/Resources/lib/libRlapack.dylib
+## BLAS:   /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRblas.0.dylib
+## LAPACK: /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRlapack.dylib
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -310,40 +280,44 @@ sessionInfo()
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] here_1.0.1           microbiome_1.10.0    phyloseq_1.34.0     
-##  [4] forcats_0.5.0        stringr_1.4.0        dplyr_1.0.4         
-##  [7] purrr_0.3.4          readr_1.4.0          tidyr_1.1.2         
-## [10] tibble_3.0.6         ggplot2_3.3.3        tidyverse_1.3.0.9000
+##  [1] here_1.0.1           microbiome_1.14.0    phyloseq_1.36.0     
+##  [4] forcats_0.5.1        stringr_1.4.0        dplyr_1.0.7         
+##  [7] purrr_0.3.4          readr_2.1.0          tidyr_1.1.4         
+## [10] tibble_3.1.6         ggplot2_3.3.5        tidyverse_1.3.1.9000
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] nlme_3.1-149        fs_1.5.0            lubridate_1.7.9    
-##  [4] progress_1.2.2      httr_1.4.2          rprojroot_2.0.2    
-##  [7] tools_4.0.2         backports_1.2.1     R6_2.5.0           
-## [10] vegan_2.5-7         DBI_1.1.1           BiocGenerics_0.34.0
-## [13] mgcv_1.8-32         colorspace_2.0-0    permute_0.9-5      
-## [16] ade4_1.7-16         withr_2.4.1         tidyselect_1.1.0   
-## [19] prettyunits_1.1.1   compiler_4.0.2      cli_2.3.0          
-## [22] rvest_0.3.6         Biobase_2.50.0      xml2_1.3.2         
-## [25] scales_1.1.1        digest_0.6.27       rmarkdown_2.4      
-## [28] XVector_0.28.0      pkgconfig_2.0.3     htmltools_0.5.1.1  
-## [31] dbplyr_1.4.4        rlang_0.4.10        readxl_1.3.1       
-## [34] rstudioapi_0.13     generics_0.1.0      jsonlite_1.7.2     
-## [37] magrittr_2.0.1      biomformat_1.7.0    Matrix_1.2-18      
-## [40] Rcpp_1.0.6          munsell_0.5.0       S4Vectors_0.26.1   
-## [43] Rhdf5lib_1.10.1     ape_5.4-1           lifecycle_1.0.0    
-## [46] stringi_1.5.3       yaml_2.2.1          MASS_7.3-52        
-## [49] zlibbioc_1.34.0     Rtsne_0.15          rhdf5_2.32.4       
-## [52] plyr_1.8.6          grid_4.0.2          blob_1.2.1         
-## [55] parallel_4.0.2      crayon_1.4.1        lattice_0.20-41    
-## [58] Biostrings_2.56.0   haven_2.3.1         splines_4.0.2      
-## [61] multtest_2.44.0     hms_1.0.0           knitr_1.31         
-## [64] pillar_1.4.7        igraph_1.2.6        reshape2_1.4.4     
-## [67] codetools_0.2-16    stats4_4.0.2        reprex_0.3.0       
-## [70] glue_1.4.2          evaluate_0.14       data.table_1.13.6  
-## [73] modelr_0.1.8        vctrs_0.3.6         foreach_1.5.1      
-## [76] cellranger_1.1.0    gtable_0.3.0        assertthat_0.2.1   
-## [79] xfun_0.21           broom_0.7.2         survival_3.2-3     
-## [82] iterators_1.0.13    IRanges_2.22.2      cluster_2.1.0      
-## [85] ellipsis_0.3.1
+##  [1] nlme_3.1-153           bitops_1.0-7           fs_1.5.0              
+##  [4] bit64_4.0.5            lubridate_1.8.0        httr_1.4.2            
+##  [7] rprojroot_2.0.2        GenomeInfoDb_1.28.4    tools_4.1.2           
+## [10] backports_1.4.0        bslib_0.3.1            vegan_2.5-7           
+## [13] utf8_1.2.2             R6_2.5.1               mgcv_1.8-38           
+## [16] DBI_1.1.1              BiocGenerics_0.38.0    colorspace_2.0-2      
+## [19] permute_0.9-5          rhdf5filters_1.4.0     ade4_1.7-18           
+## [22] withr_2.4.2            tidyselect_1.1.1       bit_4.0.4             
+## [25] compiler_4.1.2         cli_3.1.0              rvest_1.0.2           
+## [28] Biobase_2.52.0         xml2_1.3.2             sass_0.4.0            
+## [31] scales_1.1.1           digest_0.6.28          rmarkdown_2.11        
+## [34] XVector_0.32.0         pkgconfig_2.0.3        htmltools_0.5.2       
+## [37] dbplyr_2.1.1           fastmap_1.1.0          rlang_0.4.12          
+## [40] readxl_1.3.1           rstudioapi_0.13        jquerylib_0.1.4       
+## [43] generics_0.1.1         jsonlite_1.7.2         vroom_1.5.6           
+## [46] RCurl_1.98-1.5         magrittr_2.0.1         GenomeInfoDbData_1.2.6
+## [49] biomformat_1.20.0      Matrix_1.3-4           Rcpp_1.0.7            
+## [52] munsell_0.5.0          S4Vectors_0.30.2       Rhdf5lib_1.14.2       
+## [55] fansi_0.5.0            ape_5.5                lifecycle_1.0.1       
+## [58] stringi_1.7.5          yaml_2.2.1             MASS_7.3-54           
+## [61] zlibbioc_1.38.0        Rtsne_0.15             rhdf5_2.36.0          
+## [64] plyr_1.8.6             grid_4.1.2             parallel_4.1.2        
+## [67] crayon_1.4.2           lattice_0.20-45        splines_4.1.2         
+## [70] Biostrings_2.60.2      haven_2.4.3            multtest_2.48.0       
+## [73] hms_1.1.1              knitr_1.36             pillar_1.6.4          
+## [76] igraph_1.2.6           reshape2_1.4.4         codetools_0.2-18      
+## [79] stats4_4.1.2           reprex_2.0.1           glue_1.5.0            
+## [82] evaluate_0.14          data.table_1.14.2      modelr_0.1.8          
+## [85] vctrs_0.3.8            tzdb_0.2.0             foreach_1.5.1         
+## [88] cellranger_1.1.0       gtable_0.3.0           assertthat_0.2.1      
+## [91] xfun_0.28              broom_0.7.10           survival_3.2-13       
+## [94] iterators_1.0.13       IRanges_2.26.0         cluster_2.1.2         
+## [97] ellipsis_0.3.2
 ```
 

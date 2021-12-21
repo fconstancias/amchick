@@ -1,0 +1,55 @@
+---
+title: "Merge SQM ORF abundances with RGI annotations"
+author: "Sneha Sundar"
+date: "04/08/2021"
+output: html_document
+---
+
+Load required packages
+```{r}
+library('dplyr')
+library("tidyverse")
+library('here')
+
+```
+File paths to the SQM R object, formatted RGI annotation file and output merged file. 
+
+```{r}
+in_sqm_r <- here('sqm_results','chicken_SQM.rds')
+in_rgi <- here('rgi_results','rgi_ORF_chicken_formatted.txt')
+out_file <- here('data','sqm_rgi_chicken.txt')
+```
+
+
+Load the SqueezeMeta R object. It is quite big so need to find the best way to do this without having to store this object in my system . 
+```{r}
+chicken = readRDS(in_sqm_r)
+```
+
+Exploring the R Object: orfs$table seems to have all the info needed - TPM, read abundances, base abundances, coverage
+```{r}
+chicken$orfs$table[1:5,]
+```
+
+Load the RGI results that is in a .txt file. However this text file needs to be formatted a bit before we can load as a dataframe correctly. I wrote a small bash script to do that and ran it. We will now load this formatted .txt file. This holds the ORF_ID and corresponding antibiotic resistance gene annotation in a tab-delimited format. 
+```{r}
+rgi_result <- read.table(in_rgi,sep='\t', header=TRUE,quote = "")
+
+rgi_result %>% head()
+```
+Some cleaning up of the ORF abundance table. 
+```{r}
+orfs_table<-chicken$orfs$table %>% rownames_to_column('ORF_ID')
+
+```
+
+Joining the SQM orf abundance table with the rgi annotations. This will give us a huge dataframe that contains all the ORFs identified by SQM having corresponding RGI annotation. 
+```{r}
+orf_rgi_abundances <- left_join(rgi_result,orfs_table,by='ORF_ID')
+```
+
+Save as a tab-delimited file . 
+```{r}
+write.table(orf_rgi_abundances,out_file,sep="\t",row.names=FALSE)
+```
+
